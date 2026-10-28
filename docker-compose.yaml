@@ -1,0 +1,9 @@
+services:
+  vane:
+    build: .
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./configs:/data/conf:ro
+      - ./logs:/app/logs
+    restart: unless-stopped

@@ -1,0 +1,13 @@
+.git
+.codegraph
+.env
+*.key
+*.cert
+bin
+logs
+web/node_modules
+web/dist
+.idea
+.scratch
+configs/config.yaml
+configs/sources.yaml

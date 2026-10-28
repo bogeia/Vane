@@ -1,0 +1,8 @@
+.view-switch.is-always { display: inline-flex; flex: none; }
+.view-switch { display: none; padding: 3px; border-radius: var(--radius-button); background: var(--line); }
+.view-switch a, .view-switch button { padding: 6px 16px; border: 0; border-radius: 7px; background: transparent; color: var(--ink-2); font-size: 13.5px; }
+.view-switch a[aria-current="page"], .view-switch button[aria-pressed="true"] { background: var(--surface); color: var(--ink); font-weight: 600; box-shadow: 0 1px 2px rgb(0 0 0 / .08); }
+
+@media (max-width: 960px) {
+  .view-switch { display: inline-flex; }
+}

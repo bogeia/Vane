@@ -1,0 +1,58 @@
+version: "2"
+
+run:
+  timeout: 5m
+  tests: true
+  modules-download-mode: readonly
+
+linters:
+  default: standard
+  enable:
+    - asasalint
+    - bodyclose
+    - copyloopvar
+    - durationcheck
+    - errchkjson
+    - errname
+    - errorlint
+    - fatcontext
+    - goprintffuncname
+    - misspell
+    - nilerr
+    - nilnesserr
+    - nilnil
+    - noctx
+    - rowserrcheck
+    - sqlclosecheck
+    - unconvert
+    - unparam
+    - wastedassign
+  settings:
+    errcheck:
+      check-type-assertions: true
+    misspell:
+      locale: US
+
+issues:
+  max-issues-per-linter: 0
+  max-same-issues: 0
+
+formatters:
+  enable:
+    - goimports
+    - gci
+    - gofumpt
+  settings:
+    goimports:
+      local-prefixes:
+        - github.com/bogeia/vane
+    gci:
+      sections:
+        - standard
+        - default
+        - localmodule
+      custom-order: true
+    gofumpt:
+      module-path: github.com/bogeia/vane
+  exclusions:
+    generated: disable

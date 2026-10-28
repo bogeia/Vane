@@ -1,0 +1,112 @@
+/* 全局只放设计令牌和重置样式。组件样式写在各自的 CSS 文件里，不在这里给 main、nav、h1 等元素加规则。 */
+
+:root {
+  color-scheme: light dark;
+  --bg: #f6f5f0;
+  --sidebar: #efede6;
+  --surface: #ffffff;
+  --ink: #1b221f;
+  --ink-2: #46514b;
+  --ink-3: #5f6a64;
+  --line: #e3e1d9;
+  --line-strong: #d1cec4;
+  --accent: #1f6a4c;
+  --accent-soft: #e2efe7;
+  --hot: #c2452d;
+
+  --font-sans: system-ui, -apple-system, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+  --font-serif: Georgia, "Songti SC", "STSong", SimSun, serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --radius-card: 12px;
+  --radius-button: 9px;
+  --radius-pill: 999px;
+
+  --sidebar-width: 232px;
+  --content-width: 1280px;
+  --rail-width: 296px;
+  --rail-gap: 24px;
+  /* 单栏页面和有右栏时的中间主栏一样宽，切换页面左右边缘对齐。 */
+  --reading-width: calc(var(--content-width) - var(--rail-width) - var(--rail-gap));
+  --phonebar-height: 52px;
+  --tabbar-height: 66px;
+}
+
+:root[data-theme="light"] { color-scheme: light; }
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #0f1012;
+  --sidebar: #0b0c0e;
+  --surface: #1c1e23;
+  --ink: #ededf0;
+  --ink-2: #c6c8ce;
+  --ink-3: #9fa3ab;
+  --line: #2e3137;
+  --line-strong: #42464e;
+  --accent: #6cbf96;
+  --accent-soft: #1f2b25;
+  --hot: #f08a6c;
+}
+
+/* 跟随系统：data-theme 是 system，或者主题脚本没跑起来、还没有 data-theme。 */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]):not([data-theme="dark"]) {
+    color-scheme: dark;
+    --bg: #0f1012;
+    --sidebar: #0b0c0e;
+    --surface: #1c1e23;
+    --ink: #ededf0;
+    --ink-2: #c6c8ce;
+    --ink-3: #9fa3ab;
+    --line: #2e3137;
+    --line-strong: #42464e;
+    --accent: #6cbf96;
+    --accent-soft: #1f2b25;
+    --hot: #f08a6c;
+  }
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+/* 内容变短时滚动条消失会让整页横移，固定预留滚动条位置。 */
+html { scrollbar-gutter: stable; }
+[hidden] { display: none !important; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font: 15px/1.6 var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -webkit-text-size-adjust: 100%;
+}
+
+a { color: inherit; text-decoration: none; }
+img { max-width: 100%; }
+button, input, select, textarea { font: inherit; color: inherit; }
+button { cursor: pointer; }
+button:disabled { cursor: default; }
+kbd { padding: 1px 5px; border: 1px solid var(--line-strong); border-radius: 4px; font: 11px var(--font-mono); color: var(--ink-3); }
+mark { background: var(--accent-soft); color: var(--ink); }
+
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  html { scroll-behavior: smooth; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation: none !important;
+    transition: none !important;
+    scroll-behavior: auto !important;
+  }
+}

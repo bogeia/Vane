@@ -1,0 +1,64 @@
+/* ---------- 日报详情 ---------- */
+.page-head .report-eyebrow { margin: 0 0 6px; color: var(--ink-3); font-size: 12px; font-weight: 600; letter-spacing: 2px; }
+.report-facts { display: flex; flex-wrap: wrap; gap: 4px 12px; }
+.report-facts a { display: inline-flex; align-items: center; gap: 3px; color: var(--accent); }
+.report-facts a:hover { text-decoration: underline; }
+
+.issue-nav { display: flex; flex: none; gap: 6px; }
+.issue-nav a, .issue-nav span { padding: 6px 12px; border: 1px solid var(--line-strong); border-radius: 8px; background: var(--surface); font-size: 13px; white-space: nowrap; }
+.issue-nav a:hover { border-color: var(--accent); color: var(--accent); }
+.issue-nav span { border-style: dashed; background: transparent; color: var(--ink-3); }
+
+.report-section { scroll-margin-top: 16px; }
+.report-section-title { display: flex; align-items: baseline; gap: 10px; margin: 26px 0 10px; font-size: 15px; font-weight: 650; }
+.report-section-title span { color: var(--ink-3); font-size: 13px; font-weight: 400; }
+
+.highlights { margin: 0; padding: 4px 18px; border: 1px solid var(--line); border-radius: var(--radius-card); background: var(--surface); list-style: none; }
+.highlights li { display: flex; gap: 12px; padding: 12px 0; border-top: 1px solid var(--line); }
+.highlights li:first-child { border-top: 0; }
+.highlights li > span { flex: none; width: 24px; color: var(--ink-3); font: 700 18px/24px var(--font-serif); }
+.highlights a { font-size: 15px; font-weight: 600; line-height: 1.55; }
+.highlights a:hover { color: var(--accent); }
+.highlights p { margin: 3px 0 0; color: var(--ink-3); font-size: 13px; }
+
+.report-foot { display: flex; justify-content: center; margin-top: 28px; }
+
+
+
+.recent-issues { margin: 10px 0 0; padding: 0; list-style: none; }
+.recent-issues a { display: grid; grid-template-columns: 44px minmax(0, 1fr); gap: 8px; padding: 7px 8px; border-radius: 7px; font-size: 13px; line-height: 1.5; }
+.recent-issues a:hover { background: var(--bg); }
+.recent-issues a[aria-current="page"] { background: var(--accent-soft); color: var(--accent); }
+.recent-issues time { color: var(--ink-3); font: 12px/19.5px var(--font-mono); }
+.recent-issues span { display: -webkit-box; overflow: hidden; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+
+/* ---------- 日报列表 ---------- */
+.issue-list { margin: 18px 0 0; padding: 0 18px; border: 1px solid var(--line); border-radius: var(--radius-card); background: var(--surface); list-style: none; }
+.issue-list li { border-top: 1px solid var(--line); }
+.issue-list li:first-child { border-top: 0; }
+.issue-list a { display: grid; grid-template-columns: auto auto minmax(0, 1fr); align-items: baseline; gap: 4px 14px; padding: 14px 0; }
+.issue-list time { color: var(--ink-2); font: 600 13px var(--font-mono); }
+.issue-weekday { color: var(--ink-3); font-size: 13px; }
+.issue-headline { font-size: 15px; font-weight: 600; line-height: 1.55; }
+.issue-headline.is-empty { color: var(--ink-3); font-weight: 400; }
+.issue-list a:hover .issue-headline { color: var(--accent); }
+
+/* ---------- 热点榜 ---------- */
+.hot-board { margin: 18px 0 0; padding: 0 20px; border: 1px solid var(--line); border-radius: var(--radius-card); background: var(--surface); list-style: none; }
+.hot-board li { display: grid; grid-template-columns: 24px minmax(0, 1fr) auto; align-items: start; gap: 12px; padding: 14px 0; border-top: 1px solid var(--line); }
+.hot-board li:first-child { border-top: 0; }
+.hot-board .rank { width: 24px; height: 24px; margin-top: 1px; font-size: 13px; }
+.hot-title { font-size: 16px; font-weight: 600; line-height: 1.5; }
+.hot-title:hover, .hot-board li:focus-within .hot-title { color: var(--accent); }
+.hot-sources { margin: 4px 0 0; color: var(--ink-3); font-size: 13px; }
+.hot-stats { display: grid; justify-items: end; gap: 4px; }
+.hot-heat { color: var(--ink-2); font: 600 13px var(--font-mono); white-space: nowrap; }
+.hot-trend { padding: 1px 7px; border-radius: var(--radius-pill); background: var(--hot); color: var(--surface); font-size: 12px; font-weight: 600; }
+
+@media (max-width: 960px) {
+  .report-head .issue-nav { justify-content: space-between; }
+  .report-section { scroll-margin-top: calc(var(--phonebar-height) + 12px); }
+  .issue-list, .hot-board { padding: 0 12px; }
+  .issue-list a { grid-template-columns: auto minmax(0, 1fr); }
+  .issue-headline { grid-column: 1 / -1; }
+}

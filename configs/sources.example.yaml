@@ -1,0 +1,217 @@
+# 图标由后端启动时独立发现并缓存；可选 icon_url: https://example.com/publisher-icon.svg 覆盖自动发现。
+# 省略 icon_url 表示自动发现；显式 URL 失败时保留首字头像，不切换发布者。
+# 新增网页列表信源前，先人工确认 robots.txt 允许抓取列表页和文章页。
+sources:
+  official:
+    - id: rss-openai-news
+      kind: rss
+      name: "OpenAI News"
+      feed_url: https://openai.com/news/rss.xml
+      enabled: true
+      interval_minutes: 120
+      block: []
+    - id: rss-google-deepmind
+      kind: rss
+      name: "Google DeepMind"
+      feed_url: https://deepmind.google/blog/rss.xml
+      enabled: true
+      interval_minutes: 120
+      block: []
+    - id: rss-google-research
+      kind: rss
+      name: "Google Research"
+      feed_url: https://research.google/blog/rss/
+      enabled: true
+      interval_minutes: 120
+      block: []
+    - id: rss-hugging-face
+      kind: rss
+      name: "Hugging Face Blog"
+      feed_url: https://huggingface.co/blog/feed.xml
+      enabled: true
+      interval_minutes: 120
+      block: []
+    - id: rss-microsoft-research
+      kind: rss
+      name: "Microsoft Research"
+      feed_url: https://www.microsoft.com/en-us/research/feed/
+      enabled: true
+      interval_minutes: 120
+      block: []
+    - id: rss-nvidia-blog
+      kind: rss
+      name: "NVIDIA Blog"
+      feed_url: https://blogs.nvidia.com/feed/
+      enabled: true
+      interval_minutes: 120
+      block: []
+    - id: rss-aws-ml
+      kind: rss
+      name: "AWS Machine Learning Blog"
+      feed_url: https://aws.amazon.com/blogs/machine-learning/feed/
+      enabled: true
+      interval_minutes: 120
+      block: []
+    - id: rss-github-ai
+      kind: rss
+      name: "GitHub Blog · AI & ML"
+      feed_url: https://github.blog/ai-and-ml/feed/
+      enabled: true
+      interval_minutes: 120
+      block: []
+    - id: rss-mistral
+      kind: rss
+      name: "Mistral AI"
+      feed_url: https://mistral.ai/news/rss
+      enabled: true
+      interval_minutes: 120
+      block: []
+    - id: rss-bair
+      kind: rss
+      name: "Berkeley AI Research"
+      feed_url: https://bair.berkeley.edu/blog/feed.xml
+      enabled: true
+      interval_minutes: 180
+      block: []
+    - id: rss-cursor-changelog
+      kind: rss
+      name: "Cursor Changelog"
+      feed_url: https://cursor.com/changelog/rss.xml
+      enabled: true
+      interval_minutes: 120
+      block: []
+    - id: rss-openrouter-blog
+      kind: rss
+      name: "OpenRouter Blog"
+      feed_url: https://openrouter.ai/blog/feed.xml
+      enabled: true
+      interval_minutes: 120
+      block: []
+    - id: web-anthropic-news
+      kind: web_list
+      name: "Anthropic News"
+      feed_url: https://www.anthropic.com/news
+      enabled: true
+      interval_minutes: 120
+      block: []
+      web_list:
+        item: '[data-listing-row]'
+        link: 'a[class*="__title-link"]'
+        title: h3
+        date: time
+    - id: web-kimi-blog
+      kind: web_list
+      name: "Kimi Blog"
+      feed_url: https://www.kimi.com/blog
+      enabled: true
+      interval_minutes: 120
+      block: []
+      web_list:
+        item: .menu-card
+        link: a
+        title: .card-title
+        date: .card-date
+    - id: hf-qwen
+      kind: hf_models
+      name: "Qwen（Hugging Face）"
+      feed_url: https://huggingface.co/Qwen
+      enabled: true
+      interval_minutes: 120
+      block:
+        - ["/-(FP8|FP4|NVFP4|BF16|Int4|Int8|AWQ|GPTQ|GGUF|MLX|hf)$/"]
+    - id: hf-deepseek
+      kind: hf_models
+      name: "DeepSeek（Hugging Face）"
+      feed_url: https://huggingface.co/deepseek-ai
+      enabled: true
+      interval_minutes: 120
+      block:
+        - ["/-(FP8|FP4|NVFP4|BF16|Int4|Int8|AWQ|GPTQ|GGUF|MLX|hf)$/"]
+    - id: hf-minimax
+      kind: hf_models
+      name: "MiniMax（Hugging Face）"
+      feed_url: https://huggingface.co/MiniMaxAI
+      enabled: true
+      interval_minutes: 120
+      block:
+        - ["/-(FP8|FP4|NVFP4|BF16|Int4|Int8|AWQ|GPTQ|GGUF|MLX|hf)$/"]
+    - id: hf-zhipu
+      kind: hf_models
+      name: "智谱（Hugging Face）"
+      feed_url: https://huggingface.co/zai-org
+      enabled: true
+      interval_minutes: 120
+      block:
+        - ["/-(FP8|FP4|NVFP4|BF16|Int4|Int8|AWQ|GPTQ|GGUF|MLX|hf)$/"]
+    - id: hf-kimi
+      kind: hf_models
+      name: "Kimi（Hugging Face）"
+      feed_url: https://huggingface.co/moonshotai
+      enabled: true
+      interval_minutes: 120
+      block:
+        - ["/-(FP8|FP4|NVFP4|BF16|Int4|Int8|AWQ|GPTQ|GGUF|MLX|hf)$/"]
+  media:
+    - id: rss-the-verge-ai
+      kind: rss
+      name: "The Verge · AI"
+      feed_url: https://www.theverge.com/rss/ai-artificial-intelligence/index.xml
+      enabled: true
+      interval_minutes: 60
+      block: []
+    - id: rss-techcrunch-ai
+      kind: rss
+      name: "TechCrunch · AI"
+      feed_url: https://techcrunch.com/category/artificial-intelligence/feed/
+      enabled: true
+      interval_minutes: 60
+      block: []
+    - id: rss-ars-technica-ai
+      kind: rss
+      name: "Ars Technica · AI"
+      feed_url: https://arstechnica.com/ai/feed/
+      enabled: true
+      interval_minutes: 60
+      block: []
+    - id: rss-mit-tech-review-ai
+      kind: rss
+      name: "MIT Technology Review · AI"
+      feed_url: https://www.technologyreview.com/topic/artificial-intelligence/feed
+      enabled: true
+      interval_minutes: 120
+      block: []
+    - id: rss-the-decoder
+      kind: rss
+      name: "The Decoder"
+      feed_url: https://the-decoder.com/feed/
+      enabled: true
+      interval_minutes: 60
+      block: []
+    - id: rss-simon-willison
+      kind: rss
+      name: "Simon Willison"
+      feed_url: https://simonwillison.net/atom/everything/
+      enabled: true
+      interval_minutes: 120
+      block: []
+    - id: rss-import-ai
+      kind: rss
+      name: "Import AI"
+      feed_url: https://importai.substack.com/feed
+      enabled: true
+      interval_minutes: 180
+      block: []
+    - id: rss-latent-space
+      kind: rss
+      name: "Latent Space"
+      feed_url: https://www.latent.space/feed
+      enabled: true
+      interval_minutes: 180
+      block: []
+    - id: rss-infoq-cn
+      kind: rss
+      name: "InfoQ 中文"
+      feed_url: https://www.infoq.cn/feed
+      enabled: true
+      interval_minutes: 120
+      block: []

@@ -1,0 +1,6 @@
+.rank { display: grid; flex: none; place-items: center; width: 20px; height: 20px; border-radius: 6px; background: var(--line); color: var(--ink-2); font: 700 12px var(--font-mono); }
+/* 前三名用热度色递减：往次要文字色里混，浅色深色下数字对比度都不低于 4.5。 */
+.rank-1, .rank-2, .rank-3 { color: var(--surface); }
+.rank-1 { background: var(--hot); }
+.rank-2 { background: color-mix(in srgb, var(--hot) 70%, var(--ink-3)); }
+.rank-3 { background: color-mix(in srgb, var(--hot) 40%, var(--ink-3)); }

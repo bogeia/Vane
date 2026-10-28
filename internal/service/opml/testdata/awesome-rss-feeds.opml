@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- CC0 excerpt: https://github.com/xiangyugongzuoliu/awesome-rss-feeds-list/blob/main/feeds.opml -->
+<opml version="2.0"><body>
+    <outline type="rss" text="Lil’Log" title="Lil’Log" xmlUrl="https://lilianweng.github.io/lil-log/feed.xml" />
+    <outline type="rss" text="📚 Nitay Neeman&apos;s Blog | JavaScript • Angular • RxJS" title="📚 Nitay Neeman&apos;s Blog | JavaScript • Angular • RxJS" xmlUrl="https://nitayneeman.com/index.xml" />
+    <outline type="rss" text="Lil&apos;Log" title="Lil&apos;Log" xmlUrl="https://lilianweng.github.io/index.xml" />
+</body></opml>

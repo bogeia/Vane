@@ -1,0 +1,18 @@
+.topic-group { margin-top: 26px; }
+.topic-group h2 { margin: 0 0 10px; color: var(--ink-2); font-size: 14px; font-weight: 600; }
+.topic-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 240px), 1fr)); gap: 10px; margin: 0; padding: 0; list-style: none; }
+.topic-card { display: grid; gap: 6px; height: 100%; padding: 14px 16px; border: 1px solid var(--line); border-radius: var(--radius-card); background: var(--surface); }
+.topic-card:hover { border-color: var(--accent); }
+.topic-name { display: flex; align-items: center; gap: 9px; font-size: 15px; font-weight: 650; }
+.topic-logo { flex: 0 0 24px; width: 24px; height: 24px; padding: 3px; border-radius: 5px; background: #fff; object-fit: contain; }
+.topic-card:hover .topic-name { color: var(--accent); }
+.topic-description { display: -webkit-box; overflow: hidden; -webkit-line-clamp: 2; -webkit-box-orient: vertical; color: var(--ink-2); font-size: 13px; line-height: 1.6; }
+.topic-count { align-self: end; color: var(--ink-3); font: 12px var(--font-mono); }
+
+.page-head .topic-eyebrow { margin: 0 0 6px; font-size: 13px; }
+.topic-eyebrow a { color: var(--accent); }
+.topic-eyebrow a::before { content: '‹ '; }
+
+/* ---------- 收藏 ---------- */
+.favorite-rows { margin-top: 18px; }
+.favorite-rows .row > time { font-size: 12px; }

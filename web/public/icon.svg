@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+  <!-- Vane 风向标：箭头、尾翼、立杆、横档、底座，白色标志放在圆角方块上。 -->
+  <rect width="24" height="24" rx="5.5" fill="#1f6a4c"/>
+  <g transform="translate(3.9 2.82) scale(0.72)" fill="none" stroke="#fff" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M3.5 8.5h13"/>
+    <path d="M16 5l4.5 3.5L16 12z" fill="#fff"/>
+    <path d="M3.5 8.5L2 5.5M3.5 8.5L2 11.5M6.5 8.5L5 5.5M6.5 8.5L5 11.5"/>
+    <path d="M11 8.5V20.5M8 20.5h6"/>
+    <path d="M8.5 15.5h5"/>
+  </g>
+</svg>

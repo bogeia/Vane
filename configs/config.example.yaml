@@ -1,0 +1,89 @@
+server:
+  request_timeout: 5s
+  address: 127.0.0.1:8080
+  read_timeout: 10s
+  write_timeout: 10s
+  idle_timeout: 60s
+  shutdown_timeout: 10s
+
+log:
+  level: info
+  console: true
+  filename: logs/app.log
+  max_size: 500 # MB
+  max_backups: 7 # 0 表示不按文件数量删除
+  max_age: 30 # 天；0 表示不按时间删除
+  compress: true
+
+database:
+  max_open_conns: 20
+  max_idle_conns: 10
+  conn_max_lifetime: 30m
+  url: postgres://localhost:5432/vane?sslmode=disable
+site:
+  name: Vane
+  public_url: http://localhost:8080
+push:
+  request_timeout: 10s
+  webhooks: []
+  # 实时过滤示例见 README：scope: selected | all，topics: [anthropic]，words: [[Claude, "+发布", "!招聘"]]
+  # enabled: true 且 scope: all 时必须配置主题或关注词；words 的每个内层列表是一组。
+selection:
+  thresholds:
+    official: 60
+    media: 76
+llm:
+  enabled: false
+  base_url: https://api.deepseek.com
+  api_key: ""
+  model: deepseek-chat
+  request_timeout: 20s
+  retry:
+    max_attempts: 4
+    initial_interval: 1s
+    max_interval: 16s
+
+  steps:
+    prefilter:
+      base_url: ""
+      api_key: ""
+      model: ""
+      reasoning_effort: none # none 只适用于支持该字段的本地模型
+    score:
+      base_url: ""
+      api_key: ""
+      model: ""
+      reasoning_effort: ""
+    write:
+      base_url: ""
+      api_key: ""
+      model: ""
+      reasoning_effort: none # none 只适用于支持该字段的本地模型
+    group:
+      base_url: ""
+      api_key: ""
+      model: ""
+      reasoning_effort: ""
+
+collect:
+  enabled: false
+worker:
+  attempt_timeout: 2m
+  retry:
+    max_attempts: 5
+    initial_interval: 2m
+    max_interval: 16m
+  count: 2
+web:
+  dir: web/dist
+
+fetch:
+  # 国内等环境无法直连海外信源时填写 HTTP 代理，例如 http://127.0.0.1:7890；直连时留空。
+  proxy_url: ""
+  request_timeout: 20s
+  retry:
+    max_attempts: 3
+    initial_interval: 1s
+    max_interval: 16s
+
+sources_file: sources.yaml
