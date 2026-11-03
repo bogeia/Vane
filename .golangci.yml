@@ -55,4 +55,4 @@ formatters:
     gofumpt:
       module-path: github.com/bogeia/vane
   exclusions:
-    generated: disable
+    generated: strict

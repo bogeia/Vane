@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useRef, useState, type MouseEvent, type ReactNode } from 'react'
+import { createContext, useContext, useEffect, useLayoutEffect, useRef, useState, type MouseEvent, type ReactNode } from 'react'
 import { Link, Outlet, useLocation, useNavigate, useNavigationType } from 'react-router'
 import { useChangelogUnseen } from '../changelogState'
 import { useMediaQuery } from '../lib/media'
@@ -7,32 +7,24 @@ import { refreshReading, useReports } from '../lib/reading'
 import { normalizeQuery, searchPath } from '../lib/search'
 import { nextIndex, shortcutAction, shortcutPage, type ShortcutAction } from '../lib/shortcuts'
 import {
-  BrandMark, IconArrowUp, IconBolt, IconBookmark, IconContrast, IconDoc, IconFlame, IconGrid, IconHistory, IconInfo, IconList,
-  IconMoon, IconRss, IconSearch, IconSun, IconUser, type Icon,
+  IconArrowUp, IconBolt, IconContrast, IconDoc, IconFlame, IconGrid,
+  IconMoon, IconSearch, IconSun, IconUser, type Icon,
 } from '../ui/icons'
 import { isDetailPath, navKeyFor, tabKeyFor, type NavKey, type TabKey } from './nav'
 import { nextTheme, setTheme, themeLabel, useTheme, type Theme } from './theme'
 import './shell.css'
 
-const NAV_GROUPS: { title: string; items: { key: NavKey; label: string; to: string; icon: Icon }[] }[] = [
-  { title: '内容', items: [
-    { key: 'selected', label: '精选', to: '/', icon: IconBolt },
-    { key: 'all', label: '全部动态', to: '/all', icon: IconList },
-    { key: 'hot', label: '热点榜', to: '/hot', icon: IconFlame },
-    { key: 'reports', label: '日报', to: '/reports', icon: IconDoc },
-    { key: 'topics', label: '主题', to: '/topics', icon: IconGrid },
-    { key: 'favorites', label: '收藏', to: '/favorites', icon: IconBookmark },
-  ] },
-  { title: '更多', items: [
-    { key: 'about', label: '关于', to: '/about', icon: IconInfo },
-    { key: 'agent', label: '接入 Agent', to: '/agent', icon: IconRss },
-    { key: 'changelog', label: '更新日志', to: '/changelog', icon: IconHistory },
-  ] },
+const PRIMARY_NAV: { key: NavKey; label: string; to: string }[] = [
+  { key: 'selected', label: '精选', to: '/' },
+  { key: 'all', label: '全部动态', to: '/all' },
+  { key: 'hot', label: '热点', to: '/hot' },
+  { key: 'topics', label: '主题', to: '/topics' },
+  { key: 'reports', label: '日报', to: '/reports' },
 ]
 
 const THEME_ICONS: Record<Theme, Icon> = { system: IconContrast, light: IconSun, dark: IconMoon }
 
-// 资料详情按资料是否入选决定侧栏高亮，由页面告诉外壳。
+// 资料详情按资料是否入选决定全站导航高亮，由页面告诉外壳。
 const NavHighlight = createContext<(key: NavKey | null) => void>(() => {})
 
 export function useNavHighlight(key: NavKey | null) {
@@ -81,7 +73,8 @@ export function Shell() {
   }
 
   // 点链接进入新页面时回到顶部；后退、前进交给浏览器。
-  useEffect(() => {
+  // 首次绘制前复位，避免新页短暂沿用上一页的滚动位置。
+  useLayoutEffect(() => {
     if (navigationType !== 'POP' && !hash) window.scrollTo({ top: 0, behavior: 'instant' })
   }, [pathname, navigationType, hash])
 
@@ -98,7 +91,7 @@ export function Shell() {
     switch (action) {
       case 'focus-search':
         if (matchMedia('(max-width: 960px)').matches) setSearchOpen(true)
-        else document.querySelector<HTMLInputElement>('.sidebar-search input')?.focus()
+        else document.querySelector<HTMLInputElement>('.masthead-search input')?.focus()
         return
       case 'next': case 'prev': {
         const target = items[nextIndex(current ? items.indexOf(current) : -1, items.length, action === 'next' ? 1 : -1)]
@@ -135,8 +128,9 @@ export function Shell() {
   const tabs: { key: TabKey; label: string; to: string; icon: Icon }[] = [
     { key: 'selected', label: '精选', to: '/', icon: IconBolt },
     { key: 'hot', label: '热点', to: '/hot', icon: IconFlame },
+    { key: 'topics', label: '主题', to: '/topics', icon: IconGrid },
     { key: 'reports', label: '日报', to: latestReport ? `/reports/${latestReport}` : '/reports', icon: IconDoc },
-    { key: 'more', label: '我的', to: '/more', icon: IconUser },
+    { key: 'more', label: '更多', to: '/more', icon: IconUser },
   ]
 
   return <NavHighlight.Provider value={setOverride}>
@@ -144,28 +138,23 @@ export function Shell() {
       <a className="skip-link" href="#main" onClick={skipToMain}>跳到正文</a>
       <ProgressBar />
 
-      <aside className="sidebar">
-        <Link className="brand" to="/"><span className="brand-mark"><BrandMark size={22} /></span><span>Vane</span></Link>
-        <SearchForm className="sidebar-search" />
-        <nav aria-label="主导航">
-          {NAV_GROUPS.map(group => <div className="nav-group" key={group.title}>
-            <p className="nav-title" id={`nav-${group.title}`}>{group.title}</p>
-            <ul aria-labelledby={`nav-${group.title}`}>{group.items.map(item => <li key={item.key}>
-              <Link to={item.to} aria-current={item.key === nav ? 'page' : undefined}><item.icon size={18} /><span>{item.label}</span>
-                {item.key === 'changelog' && changelogUnseen && <NewDot />}</Link>
-            </li>)}</ul>
-          </div>)}
+      <header className="masthead">
+        <Link className="brand" to="/"><img className="brand-mark" src="/icon.svg" alt="" width="34" height="34" /><span>Vane</span></Link>
+        <nav className="masthead-nav" aria-label="主导航">
+          {PRIMARY_NAV.map(item => <Link key={item.key} to={item.to} aria-current={item.key === nav ? 'page' : undefined}>{item.label}</Link>)}
+          <Link to="/more" aria-current={tab === 'more' ? 'page' : undefined}>更多{changelogUnseen && <NewDot />}</Link>
         </nav>
-        <div className="sidebar-foot">
-          <button type="button" className="sidebar-theme" onClick={cycleTheme}><ThemeIcon size={16} />外观：{themeLabel(theme)}</button>
-          <button type="button" className="sidebar-help" onClick={openHelp} aria-label="全部快捷键"><kbd>?</kbd></button>
+        <SearchForm className="masthead-search" />
+        <div className="masthead-tools">
+          <button type="button" className="theme-button" onClick={cycleTheme} aria-label={`外观：${themeLabel(theme)}，点按切换`} title={`外观：${themeLabel(theme)}`}><ThemeIcon size={18} /></button>
+          <button type="button" className="help-button" onClick={openHelp} aria-label="全部快捷键"><kbd>?</kbd></button>
         </div>
-      </aside>
+      </header>
 
       <header className="phonebar">
         {detail
           ? <button type="button" className="phonebar-back" onClick={goBack}><span aria-hidden="true">‹</span>返回</button>
-          : <Link className="brand" to="/"><span className="brand-mark"><BrandMark size={20} /></span><span>Vane</span></Link>}
+          : <Link className="brand" to="/"><img className="brand-mark" src="/icon.svg" alt="" width="30" height="30" /><span>Vane</span></Link>}
         <button type="button" className="phonebar-icon" aria-label="搜索资料" aria-expanded={searchOpen} aria-controls="phone-search" ref={searchButton}
           onClick={() => searchOpen ? closeSearch() : setSearchOpen(true)}><IconSearch /></button>
         <button type="button" className="phonebar-icon" aria-label={`外观：${themeLabel(theme)}，点按切换`} onClick={cycleTheme}><ThemeIcon /></button>

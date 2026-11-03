@@ -34,6 +34,7 @@ type Config struct {
 	Site        Site      `mapstructure:"site"`
 	Fetch       Fetch     `mapstructure:"fetch"`
 	LLM         LLM       `mapstructure:"llm"`
+	Community   Community `mapstructure:"community"`
 	Collect     Collect   `mapstructure:"collect"`
 	Worker      Worker    `mapstructure:"worker"`
 	Web         Web       `mapstructure:"web"`
@@ -126,6 +127,11 @@ func (c LLM) Resolve(step LLMStep) LLMStep {
 	step.APIKey = cmp.Or(step.APIKey, c.APIKey)
 	step.Model = cmp.Or(step.Model, c.Model)
 	return step
+}
+
+type Community struct {
+	Enabled         bool          `mapstructure:"enabled"`
+	RefreshInterval time.Duration `mapstructure:"refresh_interval" validate:"gt=0,lte=86400000000000"`
 }
 
 type Collect struct {
@@ -473,7 +479,14 @@ func newConfigValidator() *validator.Validate {
 			if !ok {
 				return false
 			}
-			return !c.LLM.Enabled || f.Field().Int() > int64(c.Worker.Count)
+			if !c.LLM.Enabled {
+				return true
+			}
+			available := f.Field().Int()
+			if c.Community.Enabled {
+				available--
+			}
+			return available > int64(c.Worker.Count)
 		},
 		"notblank":          func(f validator.FieldLevel) bool { return strings.TrimSpace(f.Field().String()) != "" },
 		"absolute_http_url": func(f validator.FieldLevel) bool { return isHTTPURL(f.Field().String()) },

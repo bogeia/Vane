@@ -17,6 +17,7 @@ type realtimeRetryRepo struct {
 
 func (r *realtimeRetryRepo) SyncTargets(context.Context, []string, time.Time) error { return nil }
 func (r *realtimeRetryRepo) Target(context.Context, string) (PushTarget, error)     { return r.target, nil }
+
 func (r *realtimeRetryRepo) Candidates(context.Context, RealtimeQuery) ([]RealtimeCandidate, error) {
 	return nil, nil
 }

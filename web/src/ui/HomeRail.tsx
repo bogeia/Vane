@@ -27,13 +27,17 @@ export function HomeRail({ hot: showHot = true, excludeTopic, report: showReport
       {(hot.status === 'failed' || hot.status === 'notfound') && <p className="panel-note">热点榜暂时加载不出来。</p>}
     </section>}
     {showReport && latest && <section className="panel" aria-labelledby="rail-report">
-      <div className="panel-head"><h2 id="rail-report"><IconDoc size={16} />日报</h2><Link to="/reports" aria-label="查看往期日报">往期</Link></div>
+      <div className="panel-head"><h2 id="rail-report"><IconDoc size={16} />最新日报</h2><Link to="/reports" aria-label="查看往期日报">往期</Link></div>
       <p className="rail-report-date">{latest.date}</p>
       <Link className="rail-report-headline" to={`/reports/${latest.date}`}>{latest.headline || '本期空刊'}</Link>
+      <Link className="rail-report-read" to={`/reports/${latest.date}`}>阅读日报</Link>
     </section>}
     {topicChips.length > 0 && <section className="panel" aria-labelledby="rail-topics">
-      <div className="panel-head"><h2 id="rail-topics"><IconGrid size={16} />主题</h2><Link to="/topics" aria-label="查看全部主题">全部</Link></div>
-      <div className="topic-chips">{topicChips.map(topic => <Link key={topic.slug} to={`/topics/${topic.slug}`}>{topic.name}<span>{topic.selected_count}</span></Link>)}</div>
+      <div className="panel-head"><h2 id="rail-topics"><IconGrid size={16} />探索主题</h2><Link to="/topics" aria-label="查看全部主题">全部</Link></div>
+      <div className="topic-chips">{topicChips.map(topic => <Link key={topic.slug} to={`/topics/${topic.slug}`}>
+        {topic.group === 'company' && <img src={`/logos/companies/${topic.slug}.svg`} width="24" height="24" alt="" />}
+        <span className="rail-topic-name">{topic.name}</span><span>{topic.selected_count}</span>
+      </Link>)}</div>
     </section>}
   </>
 }

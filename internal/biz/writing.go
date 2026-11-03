@@ -12,18 +12,20 @@ import (
 )
 
 type WorkItem struct {
-	Stage               string
-	LoadError           error
-	ID                  int64
-	OriginalTitle, Body string
-	PublishedAt         time.Time
-	Attempts            int
-	Tier                string
-	Prefilter           string
-	Score1, Score2      *int
-	Writing             *Writing
-	StoryID             int64
-	Selected            bool
+	Stage                  string
+	LoadError              error
+	ID                     int64
+	OriginalTitle, Body    string
+	PublishedAt            time.Time
+	Attempts               int
+	Tier                   string
+	Prefilter              string
+	Score1, Score2         *int
+	Writing                *Writing
+	StoryID                int64
+	BaseSummary            string
+	SummaryEnhancementDone bool
+	Selected               bool
 }
 
 type Fact struct {

@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"unicode"
 
 	"codeberg.org/readeck/go-readability/v2"
 	"github.com/mmcdole/gofeed"
@@ -106,24 +107,83 @@ func (f *FeedFetcher) Article(ctx context.Context, source biz.CollectSource, raw
 }
 
 func plainText(source string) string {
+	if !strings.Contains(source, "<") {
+		return normalizeBodyLines(html.UnescapeString(source))
+	}
 	doc, err := html.Parse(strings.NewReader(source))
 	if err != nil {
 		return ""
 	}
 	var text strings.Builder
-	var visit func(*html.Node)
-	visit = func(node *html.Node) {
-		if node.Type == html.ElementNode && (node.Data == "script" || node.Data == "style") {
-			return
+	pendingBreaks := 0
+	writeText := func(value string) {
+		if pendingBreaks > 0 {
+			if strings.TrimSpace(value) == "" {
+				return
+			}
+			text.WriteString(strings.Repeat("\n", pendingBreaks))
+			pendingBreaks = 0
+		}
+		text.WriteString(value)
+	}
+	var visit func(*html.Node, bool)
+	visit = func(node *html.Node, preformatted bool) {
+		separator := ""
+		if node.Type == html.ElementNode {
+			switch node.Data {
+			case "script", "style":
+				return
+			case "p", "div", "section", "article", "header", "footer", "blockquote", "h1", "h2", "h3", "h4", "h5", "h6", "pre", "ul", "ol", "dl", "table", "hr":
+				separator = "\n\n"
+			case "br", "li", "dt", "dd", "tr":
+				separator = "\n"
+			case "td", "th":
+				separator = " "
+			}
+			preformatted = preformatted || node.Data == "pre"
+		}
+		pendingBreaks = max(pendingBreaks, strings.Count(separator, "\n"))
+		if separator == " " {
+			writeText(separator)
 		}
 		if node.Type == html.TextNode {
-			text.WriteString(node.Data)
-			text.WriteByte(' ')
+			if preformatted {
+				writeText(node.Data)
+			} else {
+				// Preserve whitespace at inline boundaries without treating source formatting as paragraphs.
+				writeText(strings.Map(func(r rune) rune {
+					if unicode.IsSpace(r) {
+						return ' '
+					}
+					return r
+				}, node.Data))
+			}
 		}
 		for child := node.FirstChild; child != nil; child = child.NextSibling {
-			visit(child)
+			visit(child, preformatted)
+		}
+		if node.Data != "br" {
+			pendingBreaks = max(pendingBreaks, strings.Count(separator, "\n"))
 		}
 	}
-	visit(doc)
-	return strings.Join(strings.Fields(text.String()), " ")
+	visit(doc, false)
+	return normalizeBodyLines(text.String())
+}
+
+func normalizeBodyLines(source string) string {
+	var text strings.Builder
+	separator := ""
+	for line := range strings.SplitSeq(source, "\n") {
+		line = strings.Join(strings.Fields(line), " ")
+		if line == "" {
+			if text.Len() > 0 {
+				separator = "\n\n"
+			}
+			continue
+		}
+		text.WriteString(separator)
+		text.WriteString(line)
+		separator = "\n"
+	}
+	return text.String()
 }

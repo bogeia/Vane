@@ -28,7 +28,7 @@ func TestReportDTOHidesDomainMetadataAndPreservesJSONShape(t *testing.T) {
 	if err := json.Unmarshal(document["headline"], &headline); err != nil {
 		t.Fatal(err)
 	}
-	if len(headline) != 16 || string(headline["id"]) != `"9007199254740993"` || string(headline["tags"]) != "[]" || string(headline["published_at"]) != `"2026-10-23T00:00:00Z"` {
+	if len(headline) != 18 || string(headline["id"]) != `"9007199254740993"` || string(headline["tags"]) != "[]" || string(headline["has_body"]) != "false" || string(headline["has_discussion"]) != "false" || string(headline["published_at"]) != `"2026-10-23T00:00:00Z"` {
 		t.Fatalf("headline=%s", document["headline"])
 	}
 	for _, field := range []string{"original_title", "image_url", "published_at", "story_id", "story_others", "story_item_ids"} {
@@ -43,7 +43,7 @@ func TestReportDTOHidesDomainMetadataAndPreservesJSONShape(t *testing.T) {
 	if string(source["icon_url"]) != `""` {
 		t.Fatalf("missing icon_url: %s", headline["source"])
 	}
-	for _, hidden := range []string{"PushedAt", "pushedAt", "roundup", "Score1", "score1"} {
+	for _, hidden := range []string{"PushedAt", "pushedAt", "roundup", "Score1", "score1", "DiscussionRead", "discussion_read"} {
 		if strings.Contains(string(body), `"`+hidden+`"`) {
 			t.Fatalf("domain metadata leaked: %s", body)
 		}

@@ -1,6 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import shipped from '../src/changelog.json' with { type: 'json' }
+import { spawnSync } from 'node:child_process'
+import shipped from '../../releases.json' with { type: 'json' }
 import { createChangelogSeen, validateReleases } from '../src/lib/changelog.ts'
 
 const release = (id: string, date: string, extra: object = {}) => ({ id, date, title: `标题 ${id}`, items: ['改动'], ...extra })
@@ -51,4 +52,19 @@ test('读存储时抛错就不显示红点，写存储抛错时本次仍然隐�
   assert.equal(seen.unseen(), true)
   seen.markSeen()
   assert.equal(seen.unseen(), false)
+})
+
+
+test('Release 说明逐条来自同一发布记录，缺少或未知 tag 拒绝生成', () => {
+  const script = new URL('../../scripts/release-notes.ts', import.meta.url)
+  const release = shipped.releases[0]
+  const result = spawnSync(process.execPath, [script.pathname, release.id], { encoding: 'utf8' })
+  assert.equal(result.status, 0, result.stderr)
+  assert.equal(result.stdout, `# ${release.title}\n\n${release.date}\n\n${release.items.map(item => `- ${item}`).join('\n')}\n`)
+  for (const args of [[], ['v-does-not-exist']]) {
+    const missing = spawnSync(process.execPath, [script.pathname, ...args], { encoding: 'utf8' })
+    assert.notEqual(missing.status, 0)
+    assert.equal(missing.stdout, '')
+    assert.match(missing.stderr, /找不到发布记录/)
+  }
 })

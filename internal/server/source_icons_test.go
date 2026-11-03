@@ -31,7 +31,9 @@ func (r *iconHTTPRepo) IconState(context.Context, string) (biz.SourceIconState, 
 func (r *iconHTTPRepo) SaveIcon(context.Context, biz.Source, string, biz.SourceIcon) error {
 	return nil
 }
+
 func (r *iconHTTPRepo) Icon(context.Context, string) (biz.SourceIcon, error) { return r.icon, r.err }
+
 func TestSourceIconGETHEADAndErrors(t *testing.T) {
 	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
 	cfg := config.Config{Server: config.Server{RequestTimeout: time.Second}, Site: config.Site{Name: "Vane", PublicURL: "https://vane.test"}}

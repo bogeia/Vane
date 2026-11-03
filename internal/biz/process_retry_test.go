@@ -18,7 +18,13 @@ type failingWriter struct{ err error }
 
 func (w failingWriter) Prefilter(context.Context, WorkItem) (string, error) { return "", w.err }
 func (w failingWriter) Score(context.Context, WorkItem) (int, error)        { panic("unexpected score") }
-func (w failingWriter) Write(context.Context, WorkItem) (Writing, error)    { panic("unexpected write") }
+
+func (w failingWriter) Write(context.Context, WorkItem) (Writing, error) { panic("unexpected write") }
+
+func (w failingWriter) EnhanceSummary(context.Context, WorkItem) (string, error) {
+	panic("unexpected enhancement")
+}
+
 func (w failingWriter) Group(context.Context, WorkItem, []StoryCandidate) ([]StoryRelation, error) {
 	panic("unexpected group")
 }

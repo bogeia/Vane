@@ -11,6 +11,7 @@ import (
 )
 
 type publicItemRow struct {
+	HasBody           bool
 	Item              itemModel `gorm:"embedded"`
 	SourceName        string
 	SourceTier        string
@@ -31,13 +32,13 @@ func (row publicItemRow) item() biz.Item {
 	if stored.StoryID != nil {
 		storyID = strconv.FormatInt(*stored.StoryID, 10)
 	}
-	return biz.Item{Roundup: stored.Roundup, ID: strconv.FormatInt(stored.ID, 10), Title: stored.Title, OriginalTitle: stored.OriginalTitle, Summary: stored.Summary, Reason: stored.Reason, URL: stored.URL, ImageURL: stored.ImageURL, Source: biz.ItemSource{ID: stored.SourceID, Name: row.SourceName, Tier: row.SourceTier, IconVersion: row.SourceIconVersion}, PublishedAt: stored.PublishedAt, Score1: stored.Score1, Score2: stored.Score2, Selected: stored.Selected, Category: stored.Category, Topics: append([]string{}, stored.Topics...), Tags: append([]string{}, stored.Tags...), StoryID: storyID, StoryOthers: int(row.StoryOthers), StoryItemIDs: append([]string{}, row.StoryItemIDs...)}
+	return biz.Item{HasBody: row.HasBody, Roundup: stored.Roundup, ID: strconv.FormatInt(stored.ID, 10), Title: stored.Title, OriginalTitle: stored.OriginalTitle, Summary: stored.Summary, Reason: stored.Reason, URL: stored.URL, ImageURL: stored.ImageURL, Source: biz.ItemSource{ID: stored.SourceID, Name: row.SourceName, Tier: row.SourceTier, IconVersion: row.SourceIconVersion}, PublishedAt: stored.PublishedAt, Score1: stored.Score1, Score2: stored.Score2, Selected: stored.Selected, Category: stored.Category, Topics: append([]string{}, stored.Topics...), Tags: append([]string{}, stored.Tags...), StoryID: storyID, StoryOthers: int(row.StoryOthers), StoryItemIDs: append([]string{}, row.StoryItemIDs...)}
 }
 
 func publicItems(db *gorm.DB) *gorm.DB {
 	siblings := db.Session(&gorm.Session{NewDB: true}).Model(&itemModel{}).Select("count(*)").Where("story_id = i.story_id AND stage = ? AND id <> i.id", biz.StageDone)
 	members := db.Session(&gorm.Session{NewDB: true}).Model(&itemModel{}).Select("array_agg(id::text ORDER BY id)").Where("(story_id = i.story_id OR id = i.id) AND stage = ?", biz.StageDone)
-	return db.Model(&itemModel{}).Table("items i").Select("i.id,i.source_id,i.url,i.original_title,i.image_url,i.published_at,i.discovered_at,i.processed_at,i.score1,i.score2,i.title,i.summary,i.reason,i.category,i.tags,i.topics,i.roundup,i.selected,i.story_id,s.name AS source_name,s.tier AS source_tier,s.icon_version AS source_icon_version,(?) AS story_others,(?) AS story_item_ids", siblings, members).Joins("JOIN sources s ON s.id=i.source_id").Where("i.stage = ?", biz.StageDone)
+	return db.Model(&itemModel{}).Table("items i").Select("i.id,i.source_id,i.url,i.original_title,i.image_url,i.published_at,i.discovered_at,i.processed_at,i.score1,i.score2,i.title,i.summary,i.reason,i.category,i.tags,i.topics,i.roundup,i.selected,i.story_id,(COALESCE(i.body,'') ~ '[^[:space:]]') AS has_body,s.name AS source_name,s.tier AS source_tier,s.icon_version AS source_icon_version,(?) AS story_others,(?) AS story_item_ids", siblings, members).Joins("JOIN sources s ON s.id=i.source_id").Where("i.stage = ?", biz.StageDone)
 }
 
 func scanPublicItems(query *gorm.DB) ([]biz.Item, error) {
@@ -48,6 +49,9 @@ func scanPublicItems(query *gorm.DB) ([]biz.Item, error) {
 	items := make([]biz.Item, 0, len(records))
 	for _, record := range records {
 		items = append(items, record.item())
+	}
+	if err := loadItemDiscussions(query.Session(&gorm.Session{NewDB: true}), items); err != nil {
+		return nil, err
 	}
 	return items, nil
 }
@@ -81,14 +85,22 @@ func (r *itemsRepo) ListItems(ctx context.Context, cursor *biz.Cursor, limit int
 }
 
 func (r *itemsRepo) Detail(ctx context.Context, id int64) (biz.ItemDetail, error) {
-	items, err := scanPublicItems(publicItems(r.data.ORM.WithContext(ctx)).Where("i.id = ?", id))
+	db := r.data.ORM.WithContext(ctx)
+	var rows []publicItemRow
+	err := db.Table("(?) AS public_item", publicItems(db).Where("i.id = ?", id)).
+		Select("public_item.*, stored.body").
+		Joins("JOIN items stored ON stored.id = public_item.id").Scan(&rows).Error
 	if err != nil {
 		return biz.ItemDetail{}, err
 	}
-	if len(items) == 0 {
+	if len(rows) == 0 {
 		return biz.ItemDetail{}, biz.ErrItemNotFound
 	}
-	detail := biz.ItemDetail{Item: items[0], RelatedItems: []biz.Item{}}
+	items := []biz.Item{rows[0].item()}
+	if err := loadItemDiscussions(db, items); err != nil {
+		return biz.ItemDetail{}, err
+	}
+	detail := biz.ItemDetail{Item: items[0], Body: rows[0].Item.Body, RelatedItems: []biz.Item{}}
 	if detail.StoryID == "" {
 		return detail, nil
 	}

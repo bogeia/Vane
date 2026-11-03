@@ -1,7 +1,7 @@
 import { Link } from 'react-router'
 import './view-switch.css'
 
-// 精选/全部切换：两个链接。桌面用侧栏切换，所以只在手机外壳里显示。
+// 精选与全部范围切换，在所有屏幕上保留当前位置。
 export function ViewSwitch({ view }: { view: 'selected' | 'all' }) {
   return <nav className="view-switch" aria-label="切换列表">
     <Link to="/" aria-current={view === 'selected' ? 'page' : undefined}>精选</Link>

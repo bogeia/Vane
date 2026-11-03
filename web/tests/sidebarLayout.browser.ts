@@ -54,6 +54,7 @@ export async function testSidebarLayout(page, baseURL) {
       assert.ok(end.lastTop >= end.top && end.lastBottom <= end.bottom + 1, 'last topic is reachable inside the rail')
       assert.ok(end.bottom <= height - 10, 'rail bottom stays inside the viewport')
     }
+    let railBounds: { width: number; right: number } | undefined
     for (const [path, ready] of [
       ['/topics/openai', 'h1'], ['/favorites', 'h1'], ['/reports', '.issue-list'], ['/reports/2026-10-28', '#r-headline'],
       ['/items/item-1', '#detail-summary'], ['/stories/story-1', '.timeline li'],
@@ -63,8 +64,12 @@ export async function testSidebarLayout(page, baseURL) {
       await page.locator(ready).waitFor()
       const rail = page.locator('.columns-rail')
       await rail.waitFor()
-      assert.equal(await rail.evaluate(element => Math.round(element.getBoundingClientRect().width)), 296, `${path} rail width`)
-      assert.equal(await rail.evaluate(element => Math.round(element.getBoundingClientRect().right)), 1389, `${path} rail edge`)
+      const bounds = await rail.evaluate(element => { const rect = element.getBoundingClientRect(); return { width: Math.round(rect.width), right: Math.round(rect.right) } })
+      const mainWidth = await page.locator('.columns-main').evaluate(element => element.getBoundingClientRect().width)
+      assert.ok(bounds.width >= 240 && bounds.width < mainWidth / 2, `${path} rail remains readable without dominating the page`)
+      assert.ok(bounds.right <= 1440 - 24, `${path} rail keeps its outer gutter`)
+      railBounds ??= bounds
+      assert.deepEqual(bounds, railBounds, `${path} rail alignment stays consistent between routes`)
       if (path !== '/reports' && !path.startsWith('/reports/')) await page.locator('.columns-rail [aria-labelledby="rail-report"]').waitFor()
     }
     await page.goto(new URL('/topics/openai', baseURL).href)

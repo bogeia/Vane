@@ -30,5 +30,8 @@ func (r *storiesRepo) Story(ctx context.Context, id int64) (biz.Story, error) {
 	}
 	story.ID, story.Title = record.ID, record.Title
 	story.Items, err = scanPublicItems(publicItems(r.data.ORM.WithContext(ctx)).Where("i.story_id = ?", id).Order("i.published_at,i.id"))
-	return story, err
+	if err != nil {
+		return story, err
+	}
+	return story, nil
 }

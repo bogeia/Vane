@@ -85,7 +85,8 @@ func (r *ReportsUseCase) Generate(ctx context.Context, date string) (Report, err
 }
 
 func (r *ReportsUseCase) Get(ctx context.Context, date string) (Report, error) {
-	return r.repo.Report(ctx, date)
+	report, err := r.repo.Report(ctx, date)
+	return completeReport(report), err
 }
 
 func (r *ReportsUseCase) List(ctx context.Context) ([]ReportSummary, error) {
@@ -104,7 +105,7 @@ func (r *ReportsUseCase) generate(ctx context.Context, date string, overwrite bo
 	if err != nil {
 		return Report{}, err
 	}
-	return r.repo.GenerateReport(ctx, ReportRequest{Date: date, Overwrite: overwrite, Since: start, Until: end, HistoryLimit: 7}, func(candidates []ReportCandidate, history []Report) (Report, error) {
+	report, err := r.repo.GenerateReport(ctx, ReportRequest{Date: date, Overwrite: overwrite, Since: start, Until: end, HistoryLimit: 7}, func(candidates []ReportCandidate, history []Report) (Report, error) {
 		recent := make([]string, 0)
 		for _, old := range history {
 			for _, section := range old.Sections {
@@ -121,4 +122,24 @@ func (r *ReportsUseCase) generate(ctx context.Context, date string, overwrite bo
 		}
 		return CompileReport(date, candidates, recent)
 	})
+	return completeReport(report), err
+}
+
+func completeReport(report Report) Report {
+	if report.Headline != nil {
+		item := CompleteItem(*report.Headline)
+		report.Headline = &item
+	}
+	for index := range report.Highlights {
+		report.Highlights[index] = CompleteItem(report.Highlights[index])
+	}
+	for section := range report.Sections {
+		for index := range report.Sections[section].Items {
+			report.Sections[section].Items[index] = CompleteItem(report.Sections[section].Items[index])
+		}
+	}
+	for index := range report.Briefs {
+		report.Briefs[index] = CompleteItem(report.Briefs[index])
+	}
+	return report
 }

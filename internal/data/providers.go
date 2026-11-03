@@ -4,6 +4,7 @@ import (
 	"github.com/bogeia/vane/internal/biz"
 	"github.com/bogeia/vane/internal/config"
 	"github.com/bogeia/vane/internal/infra/fetch"
+	"github.com/bogeia/vane/internal/infra/hn"
 	"github.com/bogeia/vane/internal/infra/llm"
 	"github.com/bogeia/vane/internal/infra/push"
 )
@@ -29,3 +30,5 @@ func NewProductionFeedFetcher(cfg config.Config) *FeedFetcher {
 	}
 	return NewFeedFetcher(fetch.New(false, cfg.Fetch), selectors)
 }
+
+func NewHNDiscussionFetcher(cfg config.Config) *hn.Client { return hn.New(fetch.New(false, cfg.Fetch)) }

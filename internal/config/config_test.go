@@ -21,6 +21,8 @@ func TestLoad(t *testing.T) {
 		valid         bool
 	}{
 		{"valid", valid, true},
+		{"zero community interval", strings.Replace(valid, "refresh_interval: 30m", "refresh_interval: 0s", 1), false},
+		{"unbounded community interval", strings.Replace(valid, "refresh_interval: 30m", "refresh_interval: 25h", 1), false},
 		{"request deadline equals write timeout", strings.Replace(valid, "request_timeout: 5s", "request_timeout: 10s", 1), false},
 		{"missing request deadline", strings.Replace(valid, "  request_timeout: 5s\n", "", 1), false},
 		{"zero max open connections", strings.Replace(valid, "max_open_conns: 20", "max_open_conns: 0", 1), false},
@@ -112,7 +114,7 @@ func TestLoadRejectsMissingNewConfigSectionsAndFields(t *testing.T) {
 	}
 	valid := string(sample)
 	var cases []struct{ name, content string }
-	for _, section := range []string{"server", "log", "database", "site", "llm", "collect", "worker", "web", "sources"} {
+	for _, section := range []string{"server", "log", "database", "site", "llm", "community", "collect", "worker", "web", "sources"} {
 		cases = append(cases, struct{ name, content string }{"missing " + section + " section", withoutTopLevelSection(valid, section)})
 	}
 	for _, field := range []struct{ name, old, replacement string }{
@@ -122,6 +124,8 @@ func TestLoadRejectsMissingNewConfigSectionsAndFields(t *testing.T) {
 		{"llm.base_url", "  base_url: https://api.deepseek.com\n", ""},
 		{"llm.api_key", "  api_key: \"\"\n", ""},
 		{"llm.model", "  model: deepseek-chat\n", ""},
+		{"community.enabled", "community:\n  enabled: false\n", "community:\n"},
+		{"community.refresh_interval", "  refresh_interval: 30m\n", ""},
 		{"collect.enabled", "collect:\n  enabled: false\n", "collect:\n"},
 		{"worker.count", "  count: 2\n", ""},
 		{"web.dir", "  dir: web/dist\n", ""},
@@ -141,6 +145,8 @@ func TestLoadRejectsMissingNewConfigSectionsAndFields(t *testing.T) {
 		{"llm.base_url", "  base_url: https://api.deepseek.com\n", "  base_url: null\n"},
 		{"llm.api_key", "  api_key: \"\"\n", "  api_key: null\n"},
 		{"llm.model", "  model: deepseek-chat\n", "  model: null\n"},
+		{"community.enabled", "community:\n  enabled: false\n", "community:\n  enabled: null\n"},
+		{"community.refresh_interval", "  refresh_interval: 30m\n", "  refresh_interval: null\n"},
 		{"collect.enabled", "collect:\n  enabled: false\n", "collect:\n  enabled: null\n"},
 		{"worker.count", "  count: 2\n", "  count: null\n"},
 		{"web.dir", "  dir: web/dist\n", "  dir: null\n"},
@@ -519,6 +525,32 @@ func TestSourceBlockValidation(t *testing.T) {
 			_, err := Load(writeTestConfig(t, content))
 			if err == nil || !strings.Contains(err.Error(), "sources.official[0].block") || !strings.Contains(err.Error(), tt.rule) || strings.Contains(err.Error(), "secret") {
 				t.Fatalf("expected sanitized block rule %s, got %v", tt.rule, err)
+			}
+		})
+	}
+}
+
+func TestCommunityReservesConnectionWithoutChangingDisabledWorkerBudget(t *testing.T) {
+	sample, err := readConfigSample(t)
+	if err != nil {
+		t.Fatal(err)
+	}
+	enabled := strings.Replace(string(sample), "llm:\n  enabled: false", "llm:\n  enabled: true", 1)
+	enabled = strings.Replace(enabled, "api_key: \"\"", "api_key: test-key", 1)
+	enabled = strings.Replace(enabled, "max_open_conns: 20", "max_open_conns: 3", 1)
+	enabled = strings.Replace(enabled, "max_idle_conns: 10", "max_idle_conns: 3", 1)
+	for _, test := range []struct {
+		name, content string
+		valid         bool
+	}{
+		{"disabled discussions keep existing worker budget", enabled, true},
+		{"enabled discussions require spare connection", strings.Replace(enabled, "community:\n  enabled: false", "community:\n  enabled: true", 1), false},
+		{"enabled discussions with spare connection", strings.Replace(strings.Replace(enabled, "community:\n  enabled: false", "community:\n  enabled: true", 1), "max_open_conns: 3", "max_open_conns: 4", 1), true},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			_, err := Load(writeTestConfig(t, test.content))
+			if (err == nil) != test.valid {
+				t.Fatalf("valid=%v error=%v", test.valid, err)
 			}
 		})
 	}

@@ -10,6 +10,7 @@ import (
 type sourceAlertsRepo struct{ data *Data }
 
 func NewSourceAlertsRepo(data *Data) biz.SourceAlertsRepository { return &sourceAlertsRepo{data: data} }
+
 func (r *sourceAlertsRepo) SourcesForAlerts(ctx context.Context) ([]biz.SourceAlertState, error) {
 	var sources []sourceModel
 	if err := r.data.ORM.WithContext(ctx).Select("id,name,alert_started_at").Where("enabled = ?", true).Order("id").Find(&sources).Error; err != nil {

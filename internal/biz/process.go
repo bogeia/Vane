@@ -13,6 +13,7 @@ import (
 
 type Writer interface {
 	Write(context.Context, WorkItem) (Writing, error)
+	EnhanceSummary(context.Context, WorkItem) (string, error)
 	Prefilter(context.Context, WorkItem) (string, error)
 	Score(context.Context, WorkItem) (int, error)
 	Group(context.Context, WorkItem, []StoryCandidate) ([]StoryRelation, error)
@@ -86,12 +87,14 @@ func (p *Processor) RunOnce(ctx context.Context) error {
 
 // StepResult is committed independently, so a failed sibling does not erase success.
 type StepResult struct {
-	Stage         string
-	PreviousStage string
-	Prefilter     string
-	Score         *int
-	ScoreSlot     int
-	Writing       *Writing
+	Stage                  string
+	PreviousStage          string
+	Prefilter              string
+	Score                  *int
+	ScoreSlot              int
+	Writing                *Writing
+	BaseSummary            string
+	SummaryEnhancementDone bool
 }
 
 func (p *Processor) process(ctx context.Context, item WorkItem, save func(StepResult) error) (ProcessResult, error) {
@@ -105,6 +108,9 @@ func (p *Processor) process(ctx context.Context, item WorkItem, save func(StepRe
 	commit := func(step StepResult) error {
 		saveMu.Lock()
 		defer saveMu.Unlock()
+		if err := ctx.Err(); err != nil {
+			return err
+		}
 		next := item
 		step.PreviousStage = item.Stage
 		step.Stage = item.Stage
@@ -125,6 +131,10 @@ func (p *Processor) process(ctx context.Context, item WorkItem, save func(StepRe
 		}
 		if step.Writing != nil {
 			next.Writing = step.Writing
+		}
+		if step.SummaryEnhancementDone {
+			next.BaseSummary = step.BaseSummary
+			next.SummaryEnhancementDone = true
 		}
 		if event == "" && next.Stage == StagePrefiltered && next.Score1 != nil && next.Score2 != nil && next.Writing != nil {
 			event = StageEventAnalyze
@@ -194,6 +204,20 @@ func (p *Processor) process(ctx context.Context, item WorkItem, save func(StepRe
 	if failure == nil {
 		item.Selected, _ = Selection(item.Tier, *item.Score1, *item.Score2, p.thresholds)
 		item.Selected = item.Selected && !item.Writing.Roundup
+		// shortcut: interruption before checkpoint save may repeat enhancement; use provider idempotency if exactly-once calls become required.
+		if !item.SummaryEnhancementDone && SummaryType(item) != "" {
+			writing, err := p.enhanceSummary(ctx, item)
+			if err != nil {
+				failure = err
+			} else {
+				failure = commit(StepResult{Writing: &writing, BaseSummary: item.Writing.Summary, SummaryEnhancementDone: true})
+			}
+		}
+	}
+	if failure == nil {
+		failure = ctx.Err()
+	}
+	if failure == nil {
 		groupNow := p.now()
 		publishStage, err := TransitionStage(item.Stage, StageEventPublish)
 		if err != nil {

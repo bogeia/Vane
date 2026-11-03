@@ -42,13 +42,13 @@ func TestCollectedItemIsWrittenAndAppearsInAllItemsAPI(t *testing.T) {
 			http.Error(w, "unexpected fake model request", http.StatusBadRequest)
 			return
 		}
-		if kind := writeFakeModelResponse(w, r, `{}`); kind == "score" || kind == "write" {
+		if kind := writeFakeModelResponse(w, r, `{}`); kind == "score" || kind == "write" || kind == "summary_enhancement" {
 			t.Errorf("default service received %s", kind)
 		}
 	}))
 	defer llmServer.Close()
 
-	var scoreCalls, writeCalls atomic.Int32
+	var scoreCalls, writeCalls, summaryCalls atomic.Int32
 	scoreServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if kind := writeFakeModelResponse(w, r, `{}`); kind != "score" {
 			t.Errorf("score service received %s", kind)
@@ -57,10 +57,13 @@ func TestCollectedItemIsWrittenAndAppearsInAllItemsAPI(t *testing.T) {
 	}))
 	defer scoreServer.Close()
 	writeServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if kind := writeFakeModelResponse(w, r, `{"title":"中文 AI 研究发布","summary":"这项研究带来了重要进展。","reason":"值得关注其后续影响。","subjects":["openai","not-listed","google","openai"],"fact":{"title":"OpenAI发布研究","subject":"OpenAI","action":"发布","object":"研究","occurred_at":"2026-02-30"},"roundup":false,"category":"论文","tags":["RAG","OpenAI"]}`); kind != "write" {
+		if kind := writeFakeModelResponse(w, r, `{"title":"中文 AI 研究发布","summary":"这项研究带来了重要进展。","reason":"值得关注其后续影响。","subjects":["openai","not-listed","google","openai"],"fact":{"title":"OpenAI发布研究","subject":"OpenAI","action":"发布","object":"研究","occurred_at":"2026-02-30"},"roundup":false,"category":"论文","tags":["RAG","OpenAI"]}`); kind == "summary_enhancement" {
+			summaryCalls.Add(1)
+		} else if kind == "write" {
+			writeCalls.Add(1)
+		} else {
 			t.Errorf("write service received %s", kind)
 		}
-		writeCalls.Add(1)
 	}))
 	defer writeServer.Close()
 
@@ -90,8 +93,8 @@ func TestCollectedItemIsWrittenAndAppearsInAllItemsAPI(t *testing.T) {
 		t.Fatalf("write collected item: %v", err)
 	}
 
-	if scoreCalls.Load() != 2 || writeCalls.Load() != 1 {
-		t.Fatalf("separate services received score=%d write=%d calls", scoreCalls.Load(), writeCalls.Load())
+	if scoreCalls.Load() != 2 || writeCalls.Load() != 1 || summaryCalls.Load() != 1 {
+		t.Fatalf("separate services received score=%d write=%d summary=%d calls", scoreCalls.Load(), writeCalls.Load(), summaryCalls.Load())
 	}
 
 	var subjectsJSON, factJSON, topicsJSON []byte
@@ -935,7 +938,7 @@ func TestProcessorRunsBothScoresAndWritingConcurrently(t *testing.T) {
 	release := make(chan struct{})
 	var releaseOnce sync.Once
 	defer releaseOnce.Do(func() { close(release) })
-	var concurrent, maxConcurrent, requests atomic.Int32
+	var concurrent, maxConcurrent, requests, summaries, scores, writings, finished atomic.Int32
 	llmServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var request struct {
 			Messages []struct {
@@ -959,16 +962,27 @@ func TestProcessorRunsBothScoresAndWritingConcurrently(t *testing.T) {
 			requests.Add(1)
 			writeFakeCompletion(w, `{"label":"PASS","reason":"AI 相关"}`)
 		case strings.Contains(prompt, "事件注意力评分器"):
+			scores.Add(1)
 			requests.Add(1)
 			gateConcurrentModelCall(t, "score", started, release, &concurrent, &maxConcurrent)
 			writeFakeCompletion(w, `{"attention_score":80}`)
+			finished.Add(1)
 		case strings.Contains(prompt, "事件归组"):
 			requests.Add(1)
 			writeFakeCompletion(w, `{"relations":[]}`)
+		case strings.Contains(prompt, "资料中文摘要编辑"):
+			requests.Add(1)
+			summaries.Add(1)
+			if concurrent.Load() != 0 || finished.Load() != 3 {
+				t.Error("enhancement started before both scores and base writing completed")
+			}
+			writeFakeCompletion(w, `{"summary":"研究完成对照实验后报告了方法与主要结果。"}`)
 		default:
+			writings.Add(1)
 			requests.Add(1)
 			gateConcurrentModelCall(t, "write", started, release, &concurrent, &maxConcurrent)
 			writeFakeCompletion(w, `{"title":"并发写作标题","summary":"并发写作摘要","subjects":[],"fact":null,"roundup":false,"category":"论文","tags":[]}`)
+			finished.Add(1)
 		}
 	}))
 	defer llmServer.Close()
@@ -1014,8 +1028,8 @@ func TestProcessorRunsBothScoresAndWritingConcurrently(t *testing.T) {
 	if got := maxConcurrent.Load(); got < 3 {
 		t.Fatalf("maximum concurrent model requests = %d, want at least 3", got)
 	}
-	if got := requests.Load(); got != 4 {
-		t.Fatalf("total model requests = %d, want prefilter and three parallel calls", got)
+	if got := requests.Load(); got != 5 || summaries.Load() != 1 || scores.Load() != 2 || writings.Load() != 1 {
+		t.Fatalf("model requests=%d score=%d write=%d summary=%d, want prefilter, three parallel calls and one later enhancement", got, scores.Load(), writings.Load(), summaries.Load())
 	}
 }
 
@@ -1042,7 +1056,7 @@ func TestProcessorWritesConcurrentItemsOnceAndSkipsCompletedItems(t *testing.T) 
 	}))
 	defer feedServer.Close()
 
-	var requests atomic.Int32
+	var requests, prefilters, scores, writings, summaries, groups atomic.Int32
 	started := make(chan struct{}, 2)
 	release := make(chan struct{})
 	var releaseOnce sync.Once
@@ -1052,7 +1066,20 @@ func TestProcessorWritesConcurrentItemsOnceAndSkipsCompletedItems(t *testing.T) 
 			started <- struct{}{}
 			<-release
 		}
-		writeFakeModelResponseSameStory(w, r, `{"title":"并发生成的中文标题","summary":"生成的中文摘要","subjects":[],"fact":null,"roundup":false,"category":"论文","tags":["RAG"]}`)
+		switch writeFakeModelResponseSameStory(w, r, `{"title":"并发生成的中文标题","summary":"生成的中文摘要","subjects":[],"fact":null,"roundup":false,"category":"论文","tags":["RAG"]}`) {
+		case "prefilter":
+			prefilters.Add(1)
+		case "score":
+			scores.Add(1)
+		case "write":
+			writings.Add(1)
+		case "summary_enhancement":
+			summaries.Add(1)
+		case "group":
+			groups.Add(1)
+		default:
+			t.Error("unexpected fake model request")
+		}
 	}))
 	defer llmServer.Close()
 
@@ -1094,8 +1121,8 @@ func TestProcessorWritesConcurrentItemsOnceAndSkipsCompletedItems(t *testing.T) 
 	if err := <-processorResult; err != nil {
 		t.Fatalf("process collected items: %v", err)
 	}
-	if got := requests.Load(); got != 9 {
-		t.Fatalf("model requests for two items = %d, want four analysis calls per item and one grouping call", got)
+	if got := requests.Load(); got != 11 || prefilters.Load() != 2 || scores.Load() != 4 || writings.Load() != 2 || summaries.Load() != 2 || groups.Load() != 1 {
+		t.Fatalf("requests=%d prefilter=%d score=%d write=%d summary=%d group=%d, want 11/2/4/2/2/1", got, prefilters.Load(), scores.Load(), writings.Load(), summaries.Load(), groups.Load())
 	}
 
 	request := httptest.NewRequest(http.MethodGet, "/api/items?view=all", nil)
@@ -1122,8 +1149,8 @@ func TestProcessorWritesConcurrentItemsOnceAndSkipsCompletedItems(t *testing.T) 
 	if err := application.Processor.RunOnce(t.Context()); err != nil {
 		t.Fatalf("rerun processor after completion: %v", err)
 	}
-	if got := requests.Load(); got != 9 {
-		t.Fatalf("model requests after rerunning completed items = %d, want 9", got)
+	if got := requests.Load(); got != 11 || prefilters.Load() != 2 || scores.Load() != 4 || writings.Load() != 2 || summaries.Load() != 2 || groups.Load() != 1 {
+		t.Fatalf("completed items repeated model calls: requests=%d prefilter=%d score=%d write=%d summary=%d group=%d", got, prefilters.Load(), scores.Load(), writings.Load(), summaries.Load(), groups.Load())
 	}
 }
 
@@ -1580,7 +1607,7 @@ func TestRunnerStartsWriterAndCancellationReleasesClaimedItem(t *testing.T) {
 	}))
 	defer feedServer.Close()
 
-	var prefilters, scores, writings, groupings atomic.Int32
+	var prefilters, scores, writings, summaries, groupings atomic.Int32
 	blockedScore := make(chan struct{}, 1)
 	llmServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var request struct {
@@ -1619,6 +1646,9 @@ func TestRunnerStartsWriterAndCancellationReleasesClaimedItem(t *testing.T) {
 		case strings.Contains(prompt, "事件归组"):
 			groupings.Add(1)
 			writeFakeCompletion(w, `{"relations":[]}`)
+		case strings.Contains(prompt, "资料中文摘要编辑"):
+			summaries.Add(1)
+			writeFakeCompletion(w, `{"summary":""}`)
 		default:
 			writings.Add(1)
 			writeFakeCompletion(w, `{"title":"取消后重新处理成功","summary":"锁已释放并完成写作。","subjects":[],"fact":null,"roundup":false,"category":"论文","tags":["RAG"]}`)
@@ -1650,8 +1680,8 @@ func TestRunnerStartsWriterAndCancellationReleasesClaimedItem(t *testing.T) {
 	if err := application.Processor.RunOnce(t.Context()); err == nil {
 		t.Fatal("first processing attempt succeeded despite invalid JSON from one scoring step")
 	}
-	if prefilters.Load() != 1 || scores.Load() != 2 || writings.Load() != 1 {
-		t.Fatalf("calls after partial failure = prefilter:%d score:%d write:%d", prefilters.Load(), scores.Load(), writings.Load())
+	if prefilters.Load() != 1 || scores.Load() != 2 || writings.Load() != 1 || summaries.Load() != 0 {
+		t.Fatalf("calls after partial failure = prefilter:%d score:%d write:%d summary:%d", prefilters.Load(), scores.Load(), writings.Load(), summaries.Load())
 	}
 	clock = clock.Add(2 * time.Minute)
 	runContext, cancelRun := context.WithCancel(t.Context())
@@ -1666,6 +1696,9 @@ func TestRunnerStartsWriterAndCancellationReleasesClaimedItem(t *testing.T) {
 	}
 	cancelRun()
 	<-runResult
+	if summaries.Load() != 0 {
+		t.Fatal("enhancement ran before canceled scoring completed")
+	}
 
 	if err := application.Processor.RunOnce(t.Context()); err != nil {
 		t.Fatalf("process item after canceled worker released its claim: %v", err)
@@ -1678,6 +1711,9 @@ func TestRunnerStartsWriterAndCancellationReleasesClaimedItem(t *testing.T) {
 	}
 	if got := writings.Load(); got != 1 {
 		t.Fatalf("writing requests after cancellation recovery = %d, want one", got)
+	}
+	if got := summaries.Load(); got != 1 {
+		t.Fatalf("summary requests after cancellation recovery = %d, want one", got)
 	}
 	if got := groupings.Load(); got != 0 {
 		t.Fatalf("grouping requests after cancellation recovery = %d, want zero", got)
@@ -1724,6 +1760,9 @@ func writeFakeModelResponseMode(w http.ResponseWriter, r *http.Request, writing 
 	case strings.Contains(prompt, "事件注意力评分器"):
 		kind = "score"
 		content = `{"attention_score":80}`
+	case strings.Contains(prompt, "资料中文摘要编辑"):
+		kind = "summary_enhancement"
+		content = `{"summary":""}`
 	case strings.Contains(prompt, "事件归组"):
 		kind = "group"
 		relation := "UNRELATED"

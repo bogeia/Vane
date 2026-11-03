@@ -55,20 +55,62 @@ func TestItemDetailReturnsPublicFieldsAndOnlyPublishedStorySiblings(t *testing.T
 		t.Fatalf("set story representative: %v", err)
 	}
 
+	const collectedBody = "Collected first paragraph.\n\nSecond paragraph with 中文."
+	if _, err := testDB(t, application.Data).ExecContext(ctx, `UPDATE items SET body=$1 WHERE story_id=$2`, collectedBody, storyID); err != nil {
+		t.Fatalf("seed collected body: %v", err)
+	}
+
 	response := httptest.NewRecorder()
 	application.Router.ServeHTTP(response, httptest.NewRequestWithContext(ctx, http.MethodGet, path.Join("/api/items", strconv.FormatInt(targetID, 10)), nil))
 	if response.Code != http.StatusOK {
 		t.Fatalf("GET item detail returned %d: %s", response.Code, response.Body.String())
 	}
+	var rawDetail map[string]json.RawMessage
+	if err := json.Unmarshal(response.Body.Bytes(), &rawDetail); err != nil {
+		t.Fatal(err)
+	}
+	var related []map[string]json.RawMessage
+	if err := json.Unmarshal(rawDetail["related_items"], &related); err != nil {
+		t.Fatal(err)
+	}
+	for _, item := range related {
+		if _, ok := item["body"]; ok {
+			t.Fatal("related item leaked body")
+		}
+	}
+	listResponse := httptest.NewRecorder()
+	application.Router.ServeHTTP(listResponse, httptest.NewRequestWithContext(ctx, http.MethodGet, "/api/items", nil))
+	if listResponse.Code != http.StatusOK {
+		t.Fatalf("list items returned %d: %s", listResponse.Code, listResponse.Body)
+	}
+	var list struct {
+		Items []map[string]json.RawMessage `json:"items"`
+	}
+	if err := json.Unmarshal(listResponse.Body.Bytes(), &list); err != nil {
+		t.Fatal(err)
+	}
+	if len(list.Items) != 3 {
+		t.Fatalf("list item count=%d, want 3", len(list.Items))
+	}
+	for _, item := range list.Items {
+		if _, ok := item["body"]; ok {
+			t.Fatal("list item leaked body")
+		}
+	}
 	var detail struct {
+		Body string `json:"body"`
 		service.Item
 		RelatedItems []service.Item `json:"related_items"`
 	}
 	if err := json.NewDecoder(response.Body).Decode(&detail); err != nil {
 		t.Fatalf("decode item detail: %v", err)
 	}
+	if detail.Body != collectedBody {
+		t.Fatalf("body = %q, want %q", detail.Body, collectedBody)
+	}
 	want := service.Item{
-		ID: strconv.FormatInt(targetID, 10), Title: "Written target title", OriginalTitle: "Original target title",
+		HasBody: true,
+		ID:      strconv.FormatInt(targetID, 10), Title: "Written target title", OriginalTitle: "Original target title",
 		Summary: "Target summary", Reason: "Target reason", URL: "https://example.test/target", ImageURL: "https://example.test/target.jpg",
 		Source: service.ItemSource{ID: "detail-fixture", Name: "Detail Fixture", Tier: "official"}, PublishedAt: targetPublished,
 		Score: 80, Selected: true, Category: "模型", Tags: []string{"OpenAI", "RAG"}, StoryID: strconv.FormatInt(storyID, 10), StoryOthers: 2,
@@ -89,6 +131,9 @@ func TestItemDetailReturnsPublicFieldsAndOnlyPublishedStorySiblings(t *testing.T
 		t.Errorf("related items are not ordered by published_at then id: %+v", detail.RelatedItems)
 	}
 	for _, related := range detail.RelatedItems {
+		if !related.HasBody || related.HasDiscussion {
+			t.Errorf("related item reading flags disagree with stored body and absent discussion: %+v", related)
+		}
 		if related.OriginalTitle == "Original target title" || strings.HasPrefix(related.OriginalTitle, "Hidden ") {
 			t.Errorf("related items included self or unpublished material: %+v", related)
 		}
@@ -107,7 +152,15 @@ func TestItemDetailReturnsPublicFieldsAndOnlyPublishedStorySiblings(t *testing.T
 	if loneResponse.Code != http.StatusOK {
 		t.Fatalf("GET lone item detail returned %d: %s", loneResponse.Code, loneResponse.Body.String())
 	}
+	var loneDocument map[string]json.RawMessage
+	if err := json.Unmarshal(loneResponse.Body.Bytes(), &loneDocument); err != nil {
+		t.Fatal(err)
+	}
+	if string(loneDocument["body"]) != `""` {
+		t.Fatalf("empty body = %s, want empty string", loneDocument["body"])
+	}
 	var lone struct {
+		service.Item
 		RelatedItems []service.Item `json:"related_items"`
 	}
 	if err := json.NewDecoder(loneResponse.Body).Decode(&lone); err != nil {
@@ -115,6 +168,9 @@ func TestItemDetailReturnsPublicFieldsAndOnlyPublishedStorySiblings(t *testing.T
 	}
 	if lone.RelatedItems == nil || len(lone.RelatedItems) != 0 {
 		t.Errorf("lone item's related_items = %#v, want an empty array", lone.RelatedItems)
+	}
+	if lone.HasBody || lone.HasDiscussion {
+		t.Errorf("empty item marked readable: %+v", lone.Item)
 	}
 }
 
@@ -148,6 +204,9 @@ func TestItemDetailRejectsMissingAndUnpublishedItems(t *testing.T) {
 			}
 		}
 	}
+	if _, err := testDB(t, application.Data).ExecContext(ctx, `UPDATE items SET body='PRIVATE COLLECTED BODY' WHERE story_id=$1`, storyID); err != nil {
+		t.Fatal(err)
+	}
 	for _, test := range []struct {
 		id         string
 		wantStatus int
@@ -173,6 +232,9 @@ func TestItemDetailRejectsMissingAndUnpublishedItems(t *testing.T) {
 		}
 		response := httptest.NewRecorder()
 		application.Router.ServeHTTP(response, httptest.NewRequestWithContext(ctx, http.MethodGet, "/api/items/"+id, nil))
+		if strings.Contains(response.Body.String(), "PRIVATE COLLECTED BODY") {
+			t.Fatal("unpublished body leaked")
+		}
 		if response.Code != http.StatusNotFound || !strings.HasPrefix(response.Header().Get("Content-Type"), "application/problem+json") {
 			t.Errorf("GET %s item %s returned %d %q, want 404 problem+json", stage, id, response.Code, response.Header().Get("Content-Type"))
 		}

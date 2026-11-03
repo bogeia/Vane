@@ -18,6 +18,9 @@ type ItemSource struct {
 	Tier        string
 }
 type Item struct {
+	HasBody        bool
+	HasDiscussion  bool
+	DiscussionRead *DiscussionRead
 	Score1, Score2 *int
 	Roundup        bool
 	ID             string
@@ -55,6 +58,7 @@ var ErrItemNotFound = errors.New("item not found")
 
 type ItemDetail struct {
 	Item
+	Body         string
 	RelatedItems []Item
 }
 
@@ -129,8 +133,9 @@ func (i *ItemsUseCase) Topics(ctx context.Context) ([]taxonomy.Topic, error) {
 	return topics, nil
 }
 
-// CompleteItem applies the shared business score and title fallback.
+// CompleteItem applies shared presentation rules to repository read models.
 func CompleteItem(item Item) Item {
+	item.HasDiscussion = item.DiscussionRead.Summary() != nil
 	if item.Title == "" {
 		item.Title = item.OriginalTitle
 	}

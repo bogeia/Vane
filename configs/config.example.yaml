@@ -65,6 +65,11 @@ llm:
       model: ""
       reasoning_effort: ""
 
+# HN discussions run independently of news processing and reuse llm.steps.write.
+community:
+  enabled: false
+  refresh_interval: 30m
+
 collect:
   enabled: false
 worker:

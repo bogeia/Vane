@@ -8,10 +8,6 @@ package main
 
 import (
 	"context"
-	"log/slog"
-	"time"
-	_ "time/tzdata"
-
 	"github.com/bogeia/vane/internal/biz"
 	"github.com/bogeia/vane/internal/config"
 	"github.com/bogeia/vane/internal/data"
@@ -19,6 +15,12 @@ import (
 	"github.com/bogeia/vane/internal/server"
 	"github.com/bogeia/vane/internal/service"
 	"github.com/bogeia/vane/internal/service/agent"
+	"log/slog"
+	"time"
+)
+
+import (
+	_ "time/tzdata"
 )
 
 // Injectors from wire.go:
@@ -69,7 +71,11 @@ func NewServe(ctx context.Context, cfg config.Config, log *slog.Logger, now func
 	sourceAlertsRepository := data.NewSourceAlertsRepo(dataData)
 	sourceAlertOptions := biz.NewSourceAlertOptions(cfg)
 	sourceAlertsUseCase := biz.NewSourceAlertsUseCase(sourceAlertsRepository, client, sourceAlertOptions)
-	runner := job.NewRunner(collector, processor, log, reportsUseCase, realtimeUseCase, sourceAlertsUseCase, sourceIconsUseCase)
+	discussionsRepository := data.NewDiscussionsRepo(dataData)
+	hnClient := data.NewHNDiscussionFetcher(cfg)
+	discussionOptions := biz.NewDiscussionOptions(cfg)
+	discussionsUseCase := biz.NewDiscussionsUseCase(discussionsRepository, hnClient, llmClient, llmClient, discussionOptions, now)
+	runner := job.NewRunner(collector, processor, log, reportsUseCase, realtimeUseCase, sourceAlertsUseCase, sourceIconsUseCase, discussionsUseCase)
 	app := New(echo, runner)
 	return app, func() {
 		cleanup()

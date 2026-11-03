@@ -56,34 +56,36 @@ type itemModel struct {
 	ID       int64  `gorm:"primaryKey;generated:identity always;uniqueIndex:items_id_story_key,priority:1;index:items_pending_idx,priority:2,where:stage = 'new' OR stage = 'prefiltered' OR stage = 'analyzed';index:items_public_idx,priority:2,sort:desc,where:stage = 'done'"`
 	SourceID string `gorm:"type:text;not null;index:items_source_idx"`
 	// Escape backslashes before bytea input parsing to hash the original URL bytes.
-	URLHash       []byte             `gorm:"type:bytea;generated:sha256(replace(url, chr(92), chr(92)||chr(92))::bytea);->;not null;uniqueIndex:items_url_hash_key"`
-	URL           string             `gorm:"type:text;not null"`
-	OriginalTitle string             `gorm:"type:text;not null"`
-	Body          string             `gorm:"type:text;not null;default:''"`
-	ImageURL      string             `gorm:"type:text;not null;default:''"`
-	PublishedAt   time.Time          `gorm:"type:timestamptz;not null;index:items_public_idx,priority:1,sort:desc,where:stage = 'done'"`
-	DiscoveredAt  time.Time          `gorm:"type:timestamptz;not null;default:now()"`
-	ProcessedAt   *time.Time         `gorm:"type:timestamptz"`
-	Stage         string             `gorm:"type:text;not null;default:new;check:items_stage_check,stage IN ('new','prefiltered','analyzed','done','blocked','failed')"`
-	Attempts      int64              `gorm:"not null;default:0;check:items_attempts_check,attempts >= 0"`
-	NextAttemptAt pgtype.Timestamptz `gorm:"type:timestamptz;not null;default:now();index:items_pending_idx,priority:1,where:stage = 'new' OR stage = 'prefiltered' OR stage = 'analyzed'"`
-	LastError     string             `gorm:"type:text;not null;default:''"`
-	Prefilter     *string            `gorm:"type:text;check:items_prefilter_check,prefilter IN ('PASS','UNKNOWN','BLOCK')"`
-	Score1        *int               `gorm:"type:bigint;check:items_score1_check,score1 BETWEEN 0 AND 100"`
-	Score2        *int               `gorm:"type:bigint;check:items_score2_check,score2 BETWEEN 0 AND 100"`
-	Title         string             `gorm:"type:text;not null;default:''"`
-	Summary       string             `gorm:"type:text;not null;default:''"`
-	Reason        string             `gorm:"type:text;not null;default:''"`
-	Category      string             `gorm:"type:text;not null;default:''"`
-	Tags          textArray          `gorm:"type:text[];not null;default:'{}'"`
-	Topics        textArray          `gorm:"type:text[];not null;default:'{}';index:items_topics_idx,type:gin"`
-	Subjects      textArray          `gorm:"type:text[];not null;default:'{}'"`
-	Fact          json.RawMessage    `gorm:"type:jsonb"`
-	Roundup       bool               `gorm:"not null;default:false"`
-	Selected      bool               `gorm:"not null;default:false"`
-	StoryID       *int64             `gorm:"index:items_story_idx;uniqueIndex:items_id_story_key,priority:2"`
-	Source        *sourceModel       `gorm:"foreignKey:SourceID;constraint:items_source_id_fkey,OnDelete:RESTRICT"`
-	Story         *storyModel        `gorm:"foreignKey:StoryID;constraint:items_story_id_fkey,OnDelete:RESTRICT"`
+	URLHash                []byte             `gorm:"type:bytea;generated:sha256(replace(url, chr(92), chr(92)||chr(92))::bytea);->;not null;uniqueIndex:items_url_hash_key"`
+	URL                    string             `gorm:"type:text;not null"`
+	OriginalTitle          string             `gorm:"type:text;not null"`
+	Body                   string             `gorm:"type:text;not null;default:''"`
+	ImageURL               string             `gorm:"type:text;not null;default:''"`
+	PublishedAt            time.Time          `gorm:"type:timestamptz;not null;index:items_public_idx,priority:1,sort:desc,where:stage = 'done'"`
+	DiscoveredAt           time.Time          `gorm:"type:timestamptz;not null;default:now()"`
+	ProcessedAt            *time.Time         `gorm:"type:timestamptz"`
+	Stage                  string             `gorm:"type:text;not null;default:new;check:items_stage_check,stage IN ('new','prefiltered','analyzed','done','blocked','failed')"`
+	Attempts               int64              `gorm:"not null;default:0;check:items_attempts_check,attempts >= 0"`
+	NextAttemptAt          pgtype.Timestamptz `gorm:"type:timestamptz;not null;default:now();index:items_pending_idx,priority:1,where:stage = 'new' OR stage = 'prefiltered' OR stage = 'analyzed'"`
+	LastError              string             `gorm:"type:text;not null;default:''"`
+	Prefilter              *string            `gorm:"type:text;check:items_prefilter_check,prefilter IN ('PASS','UNKNOWN','BLOCK')"`
+	Score1                 *int               `gorm:"type:bigint;check:items_score1_check,score1 BETWEEN 0 AND 100"`
+	Score2                 *int               `gorm:"type:bigint;check:items_score2_check,score2 BETWEEN 0 AND 100"`
+	Title                  string             `gorm:"type:text;not null;default:''"`
+	BaseSummary            string             `gorm:"type:text;not null;default:''"`
+	SummaryEnhancementDone bool               `gorm:"not null;default:false"`
+	Summary                string             `gorm:"type:text;not null;default:''"`
+	Reason                 string             `gorm:"type:text;not null;default:''"`
+	Category               string             `gorm:"type:text;not null;default:''"`
+	Tags                   textArray          `gorm:"type:text[];not null;default:'{}'"`
+	Topics                 textArray          `gorm:"type:text[];not null;default:'{}';index:items_topics_idx,type:gin"`
+	Subjects               textArray          `gorm:"type:text[];not null;default:'{}'"`
+	Fact                   json.RawMessage    `gorm:"type:jsonb"`
+	Roundup                bool               `gorm:"not null;default:false"`
+	Selected               bool               `gorm:"not null;default:false"`
+	StoryID                *int64             `gorm:"index:items_story_idx;uniqueIndex:items_id_story_key,priority:2"`
+	Source                 *sourceModel       `gorm:"foreignKey:SourceID;constraint:items_source_id_fkey,OnDelete:RESTRICT"`
+	Story                  *storyModel        `gorm:"foreignKey:StoryID;constraint:items_story_id_fkey,OnDelete:RESTRICT"`
 }
 
 func (itemModel) TableName() string { return "items" }
@@ -132,3 +134,35 @@ type blockedContentModel struct {
 }
 
 func (blockedContentModel) TableName() string { return "blocked_contents" }
+
+type storyDiscussionModel struct {
+	StoryID       int64           `gorm:"primaryKey;autoIncrement:false"`
+	Snapshot      json.RawMessage `gorm:"type:jsonb;not null"`
+	Fingerprint   string          `gorm:"type:text;not null;default:''"`
+	UpdatedAt     *time.Time      `gorm:"type:timestamptz;autoUpdateTime:false"`
+	ConfirmedAt   *time.Time      `gorm:"type:timestamptz"`
+	CheckedAt     time.Time       `gorm:"type:timestamptz;not null"`
+	NextRefreshAt time.Time       `gorm:"type:timestamptz;not null;index:story_discussions_due_idx"`
+	LastError     string          `gorm:"type:text;not null;default:''"`
+	Story         *storyModel     `gorm:"foreignKey:StoryID;constraint:story_discussions_story_fk,OnDelete:CASCADE"`
+}
+
+func (storyDiscussionModel) TableName() string { return "story_discussions" }
+
+// hnPoolModel is independent of events: unmatched submissions remain available.
+type hnPoolModel struct {
+	ThreadID       int64           `gorm:"primaryKey;autoIncrement:false;check:hn_pool_thread_check,thread_id > 0"`
+	Snapshot       json.RawMessage `gorm:"type:jsonb;not null"`
+	Fingerprint    string          `gorm:"type:text;not null;default:''"`
+	PublishedAt    time.Time       `gorm:"type:timestamptz;not null;index:hn_pool_published_idx"`
+	ConfirmedAt    *time.Time      `gorm:"type:timestamptz"`
+	CheckedAt      *time.Time      `gorm:"type:timestamptz"`
+	NextRefreshAt  time.Time       `gorm:"type:timestamptz;not null;index:hn_pool_due_idx"`
+	LastError      string          `gorm:"type:text;not null;default:''"`
+	MatchSignature string          `gorm:"type:text;not null;default:''"`
+	MatchSnapshot  json.RawMessage `gorm:"type:jsonb"`
+	MatchNextAt    *time.Time      `gorm:"type:timestamptz"`
+	MatchError     string          `gorm:"type:text;not null;default:''"`
+}
+
+func (hnPoolModel) TableName() string { return "hn_discussion_pool" }

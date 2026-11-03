@@ -5,6 +5,7 @@ import (
 	"errors"
 	"log/slog"
 	"strconv"
+	"time"
 
 	"github.com/danielgtaylor/huma/v2"
 
@@ -12,9 +13,10 @@ import (
 )
 
 type Story struct {
-	ID    string `json:"id"`
-	Title string `json:"title"`
-	Items []Item `json:"items"`
+	ID         string           `json:"id"`
+	Title      string           `json:"title"`
+	Items      []Item           `json:"items"`
+	Discussion *StoryDiscussion `json:"discussion"`
 }
 
 type StoriesService struct {
@@ -44,5 +46,36 @@ func (s *StoriesService) Get(ctx context.Context, input *StoryInput) (*StoryOutp
 		s.log.ErrorContext(ctx, "get story", "error", err)
 		return nil, huma.Error500InternalServerError("internal server error")
 	}
-	return &StoryOutput{Body: Story{ID: story.ID, Title: story.Title, Items: itemsDTO(story.Items)}}, nil
+	return &StoryOutput{Body: Story{ID: story.ID, Title: story.Title, Items: itemsDTO(story.Items), Discussion: storyDiscussionDTO(story.Discussion)}}, nil
+}
+
+// StoryDiscussion is a cached sample of community opinions, separate from event facts.
+type StoryDiscussion struct {
+	ThreadURL  string                 `json:"thread_url"`
+	SampleSize int                    `json:"sample_size"`
+	UpdatedAt  time.Time              `json:"updated_at"`
+	Points     []StoryDiscussionPoint `json:"points"`
+}
+
+type StoryDiscussionPoint struct {
+	Text       string `json:"text"`
+	CommentURL string `json:"comment_url"`
+}
+
+func storyDiscussionDTO(summary *biz.DiscussionSummary) *StoryDiscussion {
+	if summary == nil || len(summary.Points) == 0 || summary.Thread.ID <= 0 {
+		return nil
+	}
+	points := make([]StoryDiscussionPoint, 0, len(summary.Points))
+	for _, point := range summary.Points {
+		if point.CommentID <= 0 {
+			return nil
+		}
+		points = append(points, StoryDiscussionPoint{Text: point.Text, CommentURL: hnItemURL(point.CommentID)})
+	}
+	return &StoryDiscussion{ThreadURL: hnItemURL(summary.Thread.ID), SampleSize: summary.SampleSize, UpdatedAt: summary.UpdatedAt, Points: points}
+}
+
+func hnItemURL(id int64) string {
+	return "https://news.ycombinator.com/item?id=" + strconv.FormatInt(id, 10)
 }

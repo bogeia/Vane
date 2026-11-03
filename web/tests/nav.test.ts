@@ -2,7 +2,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import { isDetailPath, navKeyFor, tabKeyFor } from '../src/shell/nav.ts'
 
-test('侧栏和底部标签按 spec 的表高亮', () => {
+test('顶部导航和底部标签按 spec 的表高亮', () => {
   const cases: [string, ReturnType<typeof navKeyFor>, ReturnType<typeof tabKeyFor>][] = [
     ['/', 'selected', 'selected'],
     ['/all', 'all', 'selected'],
@@ -10,8 +10,8 @@ test('侧栏和底部标签按 spec 的表高亮', () => {
     ['/stories/12', 'hot', 'hot'],
     ['/reports', 'reports', 'reports'],
     ['/reports/2026-10-23', 'reports', 'reports'],
-    ['/topics', 'topics', 'more'],
-    ['/topics/agent', 'topics', 'more'],
+    ['/topics', 'topics', 'topics'],
+    ['/topics/agent', 'topics', 'topics'],
     ['/favorites', 'favorites', 'more'],
     ['/about', 'about', 'more'],
     ['/changelog', 'changelog', 'more'],

@@ -70,3 +70,7 @@ func NewSourceAlertOptions(c config.Config) SourceAlertOptions {
 	}
 	return SourceAlertOptions{Groups: groups}
 }
+
+func NewDiscussionOptions(c config.Config) DiscussionOptions {
+	return DiscussionOptions{Enabled: c.Community.Enabled && c.LLM.Enabled, RefreshInterval: c.Community.RefreshInterval}
+}

@@ -12,22 +12,24 @@ import (
 )
 
 type Runner struct {
-	icons     *biz.SourceIconsUseCase
-	alerts    *biz.SourceAlertsUseCase
-	collector *biz.Collector
-	processor *biz.Processor
-	log       *slog.Logger
-	reports   *biz.ReportsUseCase
-	realtime  *biz.RealtimeUseCase
+	discussions *biz.DiscussionsUseCase
+	icons       *biz.SourceIconsUseCase
+	alerts      *biz.SourceAlertsUseCase
+	collector   *biz.Collector
+	processor   *biz.Processor
+	log         *slog.Logger
+	reports     *biz.ReportsUseCase
+	realtime    *biz.RealtimeUseCase
 }
 
-func NewRunner(collector *biz.Collector, processor *biz.Processor, log *slog.Logger, reports *biz.ReportsUseCase, realtime *biz.RealtimeUseCase, alerts *biz.SourceAlertsUseCase, icons *biz.SourceIconsUseCase) *Runner {
-	return &Runner{icons: icons, alerts: alerts, collector: collector, processor: processor, log: log, reports: reports, realtime: realtime}
+func NewRunner(collector *biz.Collector, processor *biz.Processor, log *slog.Logger, reports *biz.ReportsUseCase, realtime *biz.RealtimeUseCase, alerts *biz.SourceAlertsUseCase, icons *biz.SourceIconsUseCase, discussions *biz.DiscussionsUseCase) *Runner {
+	return &Runner{discussions: discussions, icons: icons, alerts: alerts, collector: collector, processor: processor, log: log, reports: reports, realtime: realtime}
 }
 
 func (r *Runner) Run(ctx context.Context) {
 	var tasks sync.WaitGroup
 	tasks.Go(func() { r.completeIcons(ctx) })
+	tasks.Go(func() { r.refreshDiscussions(ctx) })
 
 	tasks.Go(func() { r.collect(ctx) })
 	tasks.Go(func() { r.process(ctx) })
@@ -115,6 +117,20 @@ func (r *Runner) completeIcons(ctx context.Context) {
 	for {
 		if err := r.icons.Complete(ctx); err != nil && ctx.Err() == nil {
 			r.log.ErrorContext(ctx, "complete source icons", "error", err)
+		}
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticks:
+		}
+	}
+}
+
+func (r *Runner) refreshDiscussions(ctx context.Context) {
+	ticks := time.Tick(r.discussions.RefreshInterval())
+	for {
+		if err := r.discussions.RunOnce(ctx); err != nil && ctx.Err() == nil {
+			r.log.ErrorContext(ctx, "refresh HN discussions", "error", err)
 		}
 		select {
 		case <-ctx.Done():

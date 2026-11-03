@@ -70,7 +70,7 @@ func (r *workRepo) ProcessNext(ctx context.Context, now time.Time, process func(
 			continue
 		}
 		defer releaseItemLock(conn, stored.ID)
-		item = biz.WorkItem{Stage: stored.Stage, ID: stored.ID, OriginalTitle: stored.OriginalTitle, Body: stored.Body, PublishedAt: stored.PublishedAt, Attempts: int(stored.Attempts), Tier: record.Tier, Score1: stored.Score1, Score2: stored.Score2}
+		item = biz.WorkItem{Stage: stored.Stage, ID: stored.ID, OriginalTitle: stored.OriginalTitle, Body: stored.Body, PublishedAt: stored.PublishedAt, Attempts: int(stored.Attempts), Tier: record.Tier, BaseSummary: stored.BaseSummary, SummaryEnhancementDone: stored.SummaryEnhancementDone, Score1: stored.Score1, Score2: stored.Score2}
 		if stored.Prefilter != nil {
 			item.Prefilter = *stored.Prefilter
 		}
@@ -106,6 +106,8 @@ func (r *workRepo) ProcessNext(ctx context.Context, now time.Time, process func(
 			} else {
 				updates["score2"] = *step.Score
 			}
+		case step.SummaryEnhancementDone && step.Writing != nil:
+			updates["summary"] = step.Writing.Summary
 		case step.Writing != nil:
 			w := step.Writing
 			var fact any
@@ -118,6 +120,10 @@ func (r *workRepo) ProcessNext(ctx context.Context, now time.Time, process func(
 			}
 			updates["roundup"], updates["title"], updates["summary"], updates["reason"] = w.Roundup, w.Title, w.Summary, w.Reason
 			updates["category"], updates["tags"], updates["subjects"], updates["fact"] = w.Category, gorm.Expr("?::text[]", textArray(w.Tags)), gorm.Expr("?::text[]", textArray(w.Subjects)), fact
+		}
+		if step.SummaryEnhancementDone {
+			updates["base_summary"] = step.BaseSummary
+			updates["summary_enhancement_done"] = true
 		}
 		return checkStageUpdate(ctx, orm.WithContext(ctx).Model(&itemModel{}).Where("id = ? AND stage = ?", item.ID, step.PreviousStage).Updates(updates), item.ID, step.PreviousStage)
 	}

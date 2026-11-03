@@ -30,23 +30,29 @@ export function ItemCard({ item, lead = false }: { item: Item; lead?: boolean })
   return <article className={`card${lead ? ' is-lead' : ''}${reading.isRead(item.id) ? ' is-read' : ''}`} data-shortcut-item>
     <div className="card-body">
       {lead && <Picture className="card-lead-image" src={item.image_url} />}
-      <div className="card-meta">
-        <SourceAvatar name={item.source.name} iconURL={item.source.icon_url} />
-        <span className="card-source">{item.source.name}</span>
-        <time dateTime={item.published_at}>{clock(item.published_at)}</time>
-        {item.category && <span className="category-tag">{item.category}</span>}
-      </div>
       <h3 className="card-title"><Link to={`/items/${item.id}`} data-shortcut-title>{item.title}</Link></h3>
       <p className="card-summary">{item.summary}</p>
-      {item.reason && <p className="card-reason">{item.reason}</p>}
+      {lead && item.reason && <p className="card-reason">{item.reason}</p>}
+      {item.story_others > 0 && <Link className="card-others" to={`/items/${item.id}#story`}>同一事件 · 另有 {item.story_others} 家报道</Link>}
       <div className="card-actions">
-        {item.story_others > 0 && <Link className="card-others" to={`/items/${item.id}#story`}>另外 {item.story_others} 家也报道了</Link>}
+        <div className="card-meta">
+          <SourceAvatar name={item.source.name} iconURL={item.source.icon_url} />
+          <span className="card-source">{item.source.name}</span>
+          <time dateTime={item.published_at}>{clock(item.published_at)}</time>
+          {item.category && <span className="category-tag">{item.category}</span>}
+        </div>
+        <ReadableLinks item={item} />
         <span className="score">{item.score} 分</span>
+        {!lead && (item.reason || item.image_url) && <details className="card-context"><summary>{item.reason ? (item.selected ? '精选理由' : '资料评估') : '配图'}</summary>{item.reason && <p>{item.reason}</p>}<Picture className="card-context-image" src={item.image_url} /></details>}
         {favorite.message && <span className="favorite-alert" role="alert">{favorite.message}</span>}
-        <button type="button" className="icon-button" aria-label="收藏" title={favorite.saved ? '取消收藏' : '收藏'} aria-pressed={favorite.saved} onClick={favorite.toggle} data-shortcut-favorite><IconBookmark size={17} /></button>
-        <a className="icon-button" href={item.url} target="_blank" rel="noopener noreferrer" aria-label="阅读原文（新标签页）" title="阅读原文" onClick={() => reading.markRead([item.id])} data-shortcut-original><IconExternal size={17} /></a>
+        <button type="button" className="icon-button" aria-label="收藏" title={favorite.saved ? '取消收藏' : '收藏'} aria-pressed={favorite.saved} onClick={favorite.toggle} data-shortcut-favorite><IconBookmark size={17} /><span className="card-action-label">{favorite.saved ? '已收藏' : '收藏'}</span></button>
+        <a className="icon-button" href={item.url} target="_blank" rel="noopener noreferrer" aria-label="阅读原文（新标签页）" title="阅读原文" onClick={() => reading.markRead([item.id])} data-shortcut-original><IconExternal size={17} /><span className="card-action-label">原文</span></a>
       </div>
     </div>
-    {!lead && <Picture className="card-thumb" src={item.image_url} />}
   </article>
+}
+
+// 可读性由列表接口提供，不为列表另取每份详情。
+export function ReadableLinks({ item }: { item: Item }) {
+  return <>{item.has_body && <Link className="readable-link" to={`/items/${item.id}#body`}>正文</Link>}{item.has_discussion && <Link className="readable-link" to={`/items/${item.id}#discussion`}>社区讨论</Link>}</>
 }

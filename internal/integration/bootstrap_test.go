@@ -64,7 +64,7 @@ func newTestAppWithFetcher(ctx context.Context, cfg config.Config, log *slog.Log
 	client := data.NewWriter(cfg)
 	processor := biz.NewProcessor(data.NewWorkRepo(dataData), client, biz.NewProcessorOptions(cfg), now, log)
 	realtime := biz.NewRealtimeUseCase(data.NewRealtimeRepo(dataData), data.NewPushClient(cfg), biz.NewRealtimeOptions(cfg), now, log)
-	runner := job.NewRunner(collector, processor, log, reports, realtime, biz.NewSourceAlertsUseCase(data.NewSourceAlertsRepo(dataData), data.NewPushClient(cfg), biz.NewSourceAlertOptions(cfg)), icons)
+	runner := job.NewRunner(collector, processor, log, reports, realtime, biz.NewSourceAlertsUseCase(data.NewSourceAlertsRepo(dataData), data.NewPushClient(cfg), biz.NewSourceAlertOptions(cfg)), icons, biz.NewDiscussionsUseCase(data.NewDiscussionsRepo(dataData), data.NewHNDiscussionFetcher(cfg), client, client, biz.NewDiscussionOptions(cfg), now))
 	app := &testApp{Router: echo, Data: dataData, Collector: collector, Jobs: runner, Processor: processor, Reports: reports, Realtime: realtime}
 	return app, func() {
 		cleanup()

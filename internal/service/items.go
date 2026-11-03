@@ -23,6 +23,8 @@ type ItemSource struct {
 }
 
 type Item struct {
+	HasBody       bool       `json:"has_body"`
+	HasDiscussion bool       `json:"has_discussion"`
 	ID            string     `json:"id"`
 	Title         string     `json:"title"`
 	OriginalTitle string     `json:"original_title"`
@@ -48,6 +50,7 @@ type ItemPage struct {
 
 type ItemDetail struct {
 	Item
+	Body         string `json:"body"`
 	RelatedItems []Item `json:"related_items"`
 }
 
@@ -125,7 +128,7 @@ func (i *ItemsService) Detail(ctx context.Context, input *ItemInput) (*ItemOutpu
 		i.log.ErrorContext(ctx, "get item", "error", err)
 		return nil, huma.Error500InternalServerError("internal server error")
 	}
-	return &ItemOutput{Body: ItemDetail{Item: itemDTO(detail.Item), RelatedItems: itemsDTO(detail.RelatedItems)}}, nil
+	return &ItemOutput{Body: ItemDetail{Item: itemDTO(detail.Item), Body: detail.Body, RelatedItems: itemsDTO(detail.RelatedItems)}}, nil
 }
 
 type TopicsOutput struct {
@@ -156,6 +159,7 @@ func itemSourceDTO(in biz.ItemSource) ItemSource {
 
 func itemDTO(in biz.Item) Item {
 	return Item{
+		HasBody: in.HasBody, HasDiscussion: in.HasDiscussion,
 		ID: in.ID, Title: in.Title, OriginalTitle: in.OriginalTitle,
 		Summary: in.Summary, Reason: in.Reason, URL: in.URL, ImageURL: in.ImageURL,
 		Source: itemSourceDTO(in.Source), PublishedAt: in.PublishedAt, Score: in.Score,

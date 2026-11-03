@@ -13,7 +13,7 @@ import (
 )
 
 func NewMCPServer(agent *AgentService) *mcp.Server {
-	server := mcp.NewServer(&mcp.Implementation{Name: "vane", Version: "0.1.0"}, nil)
+	server := mcp.NewServer(&mcp.Implementation{Name: "vane", Version: "0.2.0"}, nil)
 	schema, err := jsonschema.For[AgentLatestInput](nil)
 	if err != nil {
 		panic(err)

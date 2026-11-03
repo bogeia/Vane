@@ -20,6 +20,7 @@ export function TopicsPage() {
   if (resource.status === 'notfound' || resource.status === 'failed') return <ErrorPage kind="failed" what="主题" onRetry={resource.retry} />
   return <>
     <header className="page-head"><div><h1>主题</h1><p>按公司、方向和内容形态追踪 AI 动态，查看各主题的精选与全部资料数。</p></div></header>
+    <nav className="topic-jumps" aria-label="主题分组">{GROUPS.map(([group, name]) => <a key={group} href={`#topics-${group}`}>{name}</a>)}</nav>
     {resource.status === 'loading' && <SkeletonCards />}
     {resource.status === 'ok' && GROUPS.map(([group, name]) => {
       const topics = resource.data.topics.filter(topic => topic.group === group)
@@ -56,7 +57,7 @@ function TopicView({ slug }: { slug: string }) {
   const view = chosenView ?? defaultTopicView(topic)
   const head = <header className="page-head">
     <div>
-      <p className="topic-eyebrow"><Link to="/topics">主题</Link></p>
+      <p className="topic-back"><Link to="/topics">所有主题</Link></p>
       <h1>{topic.name}</h1>
       <p>{topic.description}</p>
       {topic.group === 'genre' && <p><a className="inline-rss" href={`/feed/category/${topic.slug}.xml`}><IconRss size={13} />订阅{topic.name}精选 RSS</a></p>}

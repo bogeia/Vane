@@ -47,7 +47,7 @@ func (r *reportsRepo) GenerateReport(ctx context.Context, request biz.ReportRequ
 			report, err = decodeReport(content)
 			report.PushedAt = saved.PushedAt
 			if err == nil {
-				err = reportIcons(tx, &report)
+				err = reportMetadata(tx, &report)
 			}
 			return report, err
 		}
@@ -89,6 +89,9 @@ func (r *reportsRepo) GenerateReport(ctx context.Context, request biz.ReportRequ
 	if err = tx.Commit().Error; err != nil {
 		return biz.Report{}, err
 	}
+	if err := reportMetadata(r.data.ORM.WithContext(ctx), &report); err != nil {
+		return biz.Report{}, err
+	}
 	return report, nil
 }
 
@@ -109,7 +112,7 @@ func (r *reportsRepo) Report(ctx context.Context, date string) (biz.Report, erro
 	report, err = decodeReport(content)
 	report.PushedAt = saved.PushedAt
 	if err == nil {
-		err = reportIcons(r.data.ORM.WithContext(ctx), &report)
+		err = reportMetadata(r.data.ORM.WithContext(ctx), &report)
 	}
 	return report, err
 }
@@ -132,8 +135,8 @@ func (r reportSummaryRecord) domain() biz.ReportSummary {
 	return biz.ReportSummary{Date: r.Date, Headline: r.Headline}
 }
 
-// Artwork is live publisher metadata, even when the report's editorial content is a frozen snapshot.
-func reportIcons(db *gorm.DB, report *biz.Report) error {
+// Artwork and reading availability are live metadata; editorial content stays frozen.
+func reportMetadata(db *gorm.DB, report *biz.Report) error {
 	items := []*biz.Item{}
 	if report.Headline != nil {
 		items = append(items, report.Headline)
@@ -148,6 +151,24 @@ func reportIcons(db *gorm.DB, report *biz.Report) error {
 	}
 	for i := range report.Briefs {
 		items = append(items, &report.Briefs[i])
+	}
+	itemIDs := make([]string, 0, len(items))
+	for _, item := range items {
+		itemIDs = append(itemIDs, item.ID)
+	}
+	if len(itemIDs) > 0 {
+		live, err := scanPublicItems(publicItems(db).Where("i.id IN ?", itemIDs))
+		if err != nil {
+			return err
+		}
+		byID := map[string]biz.Item{}
+		for _, item := range live {
+			byID[item.ID] = item
+		}
+		for _, item := range items {
+			current := byID[item.ID]
+			item.HasBody, item.HasDiscussion, item.DiscussionRead = current.HasBody, false, current.DiscussionRead
+		}
 	}
 	ids := make([]string, 0, len(items))
 	for _, item := range items {

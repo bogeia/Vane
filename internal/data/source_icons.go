@@ -12,6 +12,7 @@ import (
 type sourceIconsRepo struct{ data *Data }
 
 func NewSourceIconsRepo(data *Data) biz.SourceIconsRepository { return &sourceIconsRepo{data: data} }
+
 func (r *sourceIconsRepo) IconState(ctx context.Context, id string) (biz.SourceIconState, error) {
 	var row sourceModel
 	err := r.data.ORM.WithContext(ctx).Select("icon_input,icon_version").Where("id = ?", id).Take(&row).Error

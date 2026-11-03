@@ -20,7 +20,7 @@ func TestMigrateCreatesConstrainedSchema(t *testing.T) {
 		t.Fatalf("migrate empty database: %s", redactMigrationError(databaseURL, err))
 	}
 
-	for _, table := range []string{"sources", "items", "stories", "reports", "fetch_records", "blocked_contents"} {
+	for _, table := range []string{"sources", "items", "stories", "reports", "fetch_records", "blocked_contents", "story_discussions"} {
 		var exists bool
 		if err := testDB(t, store).QueryRowContext(t.Context(), `SELECT to_regclass($1) IS NOT NULL`, "public."+table).Scan(&exists); err != nil {
 			t.Fatalf("check table %s: %v", table, err)

@@ -8,7 +8,7 @@
     if (saved === 'light' || saved === 'dark') theme = saved
   } catch (error) { /* 读不了存储时跟随系统。 */ }
   document.documentElement.setAttribute('data-theme', theme)
-  var colors = { light: '#f6f5f0', dark: '#0f1012' }
+  var colors = { light: '#FAFAF7', dark: '#1A2023' }
   var metas = document.querySelectorAll('meta[name="theme-color"]')
   for (var index = 0; index < metas.length; index++) {
     var own = (metas[index].getAttribute('media') || '').indexOf('dark') >= 0 ? 'dark' : 'light'

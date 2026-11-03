@@ -1,0 +1,19 @@
+.hot-explainer { color: var(--ink-3); font-size: 13px; line-height: 1.8; margin-bottom: 20px; }
+.hot-explainer summary { width: fit-content; cursor: pointer; }
+.hot-explainer p { margin: 8px 0 0; max-width: 65ch; }
+.hot-board { list-style: none; padding: 0; margin: 0; }
+.hot-board li { display: flex; align-items: flex-start; gap: 20px; padding: 24px 0; border-bottom: 1px solid var(--line); }
+.hot-body { flex: 1; min-width: 0; }
+.hot-title { font-size: 21px; font-weight: 600; line-height: 1.6; }
+.hot-title:hover { color: var(--accent); }
+.hot-sources { display: flex; flex-wrap: wrap; gap: 8px 15px; margin: 12px 0 0; color: var(--ink-2); font-size: 13px; }
+.hot-sources > span { display: inline-flex; align-items: center; gap: 6px; }
+.hot-stats { display: grid; justify-items: end; gap: 7px; flex: none; padding-top: 4px; }
+.hot-heat { font-size: 13px; color: var(--ink-3); font-variant-numeric: tabular-nums; }
+.hot-trend { color: var(--hot); font-size: 12px; }
+@media (max-width: 600px) {
+  .hot-board li { gap: 12px; flex-wrap: wrap; padding-block: 20px; }
+  .hot-title { font-size: 19px; }
+  .hot-board .rank { width: 22px; font-size: 19px; }
+  .hot-stats { margin-left: 34px; width: 100%; display: flex; justify-content: flex-start; gap: 12px; padding: 0; }
+}

@@ -7,13 +7,13 @@ import { useReadingState } from '../useReadingState'
 import { IconBookmark, IconChevron, IconGrid, IconHistory, IconInfo, IconRss, type Icon } from '../ui/icons'
 import './more.css'
 
-// 我的 /more：手机底部“我的”标签进入，桌面也能打开。
+// 更多 /more：收藏、外观和站点接入。
 export function MorePage() {
   const favorites = useReadingState().favorites().length
   const theme = useTheme()
   const unseen = useChangelogUnseen()
   return <div className="more">
-    <h1>我的</h1>
+    <h1>更多</h1>
     <section aria-labelledby="more-reading">
       <h2 id="more-reading">阅读</h2>
       <div className="more-group">

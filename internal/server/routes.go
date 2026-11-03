@@ -12,7 +12,7 @@ import (
 )
 
 func registerAPIRoutes(router *echo.Echo, operations *service.OperationsService, site config.Site, items *service.ItemsService, stories *service.StoriesService, hot *service.HotService, reports *service.ReportsService) {
-	config := huma.DefaultConfig("Vane API", "0.1.0")
+	config := huma.DefaultConfig("Vane API", "0.2.0")
 	config.Info.Description = "Vane AI 行业热点聚合站 API。"
 	api := humaecho.New(router, config)
 	huma.Register(api, huma.Operation{OperationID: "list-reports", Method: http.MethodGet, Path: "/api/reports", Summary: "最近60期日报"}, reports.List)

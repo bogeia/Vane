@@ -30,7 +30,7 @@ func Migrate(ctx context.Context, d *Data) error {
 		structure := tx.Session(&gorm.Session{NewDB: true})
 		structure.IgnoreRelationshipsWhenMigrating = true
 		structure.DisableForeignKeyConstraintWhenMigrating = true
-		if err := structure.AutoMigrate(&sourceModel{}, &storyModel{}, &itemModel{}, &reportModel{}, &fetchRecordModel{}, &blockedContentModel{}, &pushTargetModel{}, &pushDeliveryModel{}); err != nil {
+		if err := structure.AutoMigrate(&sourceModel{}, &storyModel{}, &itemModel{}, &reportModel{}, &fetchRecordModel{}, &blockedContentModel{}, &pushTargetModel{}, &pushDeliveryModel{}, &storyDiscussionModel{}, &hnPoolModel{}); err != nil {
 			return err
 		}
 		if !tx.Migrator().HasConstraint(&blockedContentModel{}, "blocked_contents_pkey") {
@@ -64,6 +64,7 @@ func Migrate(ctx context.Context, d *Data) error {
 			model any
 			name  string
 		}{
+			{&storyDiscussionModel{}, "story_discussions_story_fk"},
 			{&pushDeliveryModel{}, "push_deliveries_target_fk"},
 			{&pushDeliveryModel{}, "push_deliveries_story_fk"},
 			{&pushDeliveryModel{}, "push_deliveries_item_membership_fk"},

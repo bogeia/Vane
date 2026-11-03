@@ -14,12 +14,12 @@ export function ReportsPage() {
     <header className="page-head">
       <div>
         <h1>日报</h1>
-        <p>每天 08:00（北京时间）出刊，收录前一日 08:00 至当日 08:00 处理完的精选 · <a className="inline-rss" href="/feed/daily.xml"><IconRss size={13} />订阅日报 RSS</a></p>
+        <p>每天 08:00（北京时间）起生成，收录前一日 08:00 至当日 08:00 处理完的精选 · <a className="inline-rss" href="/feed/daily.xml"><IconRss size={13} />订阅日报 RSS</a></p>
       </div>
     </header>
     {resource.status === 'loading' && <SkeletonRows />}
     {resource.status === 'ok' && (resource.data.items.length === 0
-      ? <Empty>还没有出过日报。日报每天 08:00（北京时间）出刊。</Empty>
+      ? <Empty>还没有出过日报。日报每天 08:00（北京时间）起生成，完成后即可阅读。</Empty>
       : <ol className="issue-list">{resource.data.items.map(issue => <li key={issue.date}>
         <Link to={`/reports/${issue.date}`}>
           <time dateTime={issue.date}>{issue.date}</time>

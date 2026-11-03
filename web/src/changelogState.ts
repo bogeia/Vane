@@ -1,8 +1,8 @@
 import { useSyncExternalStore } from 'react'
-import data from './changelog.json'
+import data from '../../releases.json'
 import { createChangelogSeen, type Release } from './lib/changelog'
 
-// 更新日志是前端内置的手写 JSON，按日期从新到旧；第一条就是最新一条。
+// 更新日志与 GitHub Release 共用仓库根目录的 releases.json，按日期从新到旧；第一条就是最新一条。
 export const releases: Release[] = data.releases
 export const latestRelease = releases[0]
 export const changelogSeen = createChangelogSeen(latestRelease.id, () => localStorage)

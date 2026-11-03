@@ -4,6 +4,7 @@ import (
 	"github.com/google/wire"
 
 	"github.com/bogeia/vane/internal/biz"
+	"github.com/bogeia/vane/internal/infra/hn"
 	"github.com/bogeia/vane/internal/infra/llm"
 	"github.com/bogeia/vane/internal/infra/push"
 )
@@ -16,6 +17,11 @@ var ProviderSet = wire.NewSet(
 	NewOperationsRepo,
 	NewItemsRepo,
 	NewStoriesRepo,
+	NewDiscussionsRepo,
+	NewHNDiscussionFetcher,
+	wire.Bind(new(biz.HNDiscussionFetcher), new(*hn.Client)),
+	wire.Bind(new(biz.DiscussionSummarizer), new(*llm.Client)),
+	wire.Bind(new(biz.DiscussionMatcher), new(*llm.Client)),
 	NewHotRepo,
 	NewReportsRepo,
 	NewRealtimeRepo,

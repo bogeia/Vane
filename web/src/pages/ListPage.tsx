@@ -9,8 +9,8 @@ import { ViewSwitch } from '../ui/ViewSwitch'
 import '../ui/page.css'
 
 const SUBTITLES: Record<View, string> = {
-  selected: '评分过线的资料，同一事件只出现一次',
-  all: '所有信源的资料，按发布时间排列，点「摘要」展开',
+  selected: '从 AI 行业动态中，找到值得细读的内容。',
+  all: '所有信源的资料，按发布时间排列。',
 }
 
 // 精选 / 和全部动态 /all。全部动态的地址里有 q 时是搜索状态，结果行默认展开。

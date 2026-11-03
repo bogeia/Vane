@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
 	"slices"
 	"strings"
@@ -48,13 +49,20 @@ func (c *Client) Write(ctx context.Context, item biz.WorkItem) (biz.Writing, err
 	return biz.NormalizeWriting(result.writingDTO.domain())
 }
 
-func (c *Client) complete(ctx context.Context, step config.LLMStep, payload []byte) ([]byte, error) {
+func (c *Client) complete(ctx context.Context, name string, step config.LLMStep, payload []byte) ([]byte, error) {
 	ctx, cancel := context.WithTimeout(ctx, retry.Budget(c.cfg.RequestTimeout, retry.Policy(c.cfg.Retry)))
 	defer cancel()
-	return retry.Do(ctx, retry.Policy(c.cfg.Retry), func() ([]byte, error) { return c.request(ctx, step, payload) })
+	return retry.Do(ctx, retry.Policy(c.cfg.Retry), func() ([]byte, error) { return c.request(ctx, name, step, payload) })
 }
 
-func (c *Client) request(ctx context.Context, step config.LLMStep, payload []byte) ([]byte, error) {
+func (c *Client) request(ctx context.Context, name string, step config.LLMStep, payload []byte) (body []byte, requestErr error) {
+	started := time.Now()
+	status := 0
+	result := "request_error"
+	var inputTokens, outputTokens any = "unknown", "unknown"
+	defer func() {
+		slog.InfoContext(ctx, "model HTTP attempt", "step", name, "model", step.Model, "result", result, "http_status", status, "duration", time.Since(started), "input_tokens", inputTokens, "output_tokens", outputTokens)
+	}()
 	ctx, cancel := context.WithTimeout(ctx, c.cfg.RequestTimeout)
 	defer cancel()
 	request, err := http.NewRequestWithContext(ctx, http.MethodPost, strings.TrimRight(step.BaseURL, "/")+"/chat/completions", bytes.NewReader(payload))
@@ -75,10 +83,13 @@ func (c *Client) request(ctx context.Context, step config.LLMStep, payload []byt
 		return nil, safe
 	}
 	defer response.Body.Close()
+	status = response.StatusCode
+	result = "http_error"
 	if response.StatusCode != http.StatusOK {
 		return nil, retry.HTTPError(fmt.Errorf("model returned HTTP %d", response.StatusCode), response.StatusCode, response.Header)
 	}
-	body, err := io.ReadAll(io.LimitReader(response.Body, (1<<20)+1))
+	result = "read_error"
+	body, err = io.ReadAll(io.LimitReader(response.Body, (1<<20)+1))
 	if err != nil {
 		if ctx.Err() != nil {
 			return nil, ctx.Err()
@@ -91,6 +102,32 @@ func (c *Client) request(ctx context.Context, step config.LLMStep, payload []byt
 	}
 	if len(body) > 1<<20 {
 		return nil, retry.Permanent(fmt.Errorf("model response exceeds 1 MiB"))
+	}
+	result = "http_success"
+	var envelope struct {
+		Choices []struct {
+			Message struct {
+				Content string `json:"content"`
+			} `json:"message"`
+		} `json:"choices"`
+		Usage json.RawMessage `json:"usage"`
+	}
+	if json.Unmarshal(body, &envelope) != nil || len(envelope.Choices) == 0 {
+		result = "invalid_response"
+	} else if _, err := modelJSONObject(envelope.Choices[0].Message.Content); err != nil {
+		result = "invalid_response"
+	}
+	var usage struct {
+		Input  *int64 `json:"prompt_tokens"`
+		Output *int64 `json:"completion_tokens"`
+	}
+	if json.Unmarshal(envelope.Usage, &usage) == nil {
+		if usage.Input != nil && *usage.Input >= 0 {
+			inputTokens = *usage.Input
+		}
+		if usage.Output != nil && *usage.Output >= 0 {
+			outputTokens = *usage.Output
+		}
 	}
 	return body, nil
 }
@@ -156,9 +193,9 @@ func (c *Client) evaluateJSON(ctx context.Context, input any, step, prompt strin
 		overrides = c.cfg.Steps.Prefilter
 	case "score":
 		overrides = c.cfg.Steps.Score
-	case "writing":
+	case "writing", "summary_enhancement", "discussion_summary":
 		overrides = c.cfg.Steps.Write
-	case "grouping":
+	case "grouping", "discussion_matching":
 		overrides = c.cfg.Steps.Group
 	}
 	model := c.cfg.Resolve(overrides)
@@ -180,7 +217,7 @@ func (c *Client) evaluateJSON(ctx context.Context, input any, step, prompt strin
 	if err != nil {
 		return nil, err
 	}
-	body, err := c.complete(ctx, model, payload)
+	body, err := c.complete(ctx, step, model, payload)
 	if err != nil {
 		return nil, err
 	}

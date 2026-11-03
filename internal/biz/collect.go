@@ -95,7 +95,7 @@ func (c *Collector) RunOnce(ctx context.Context) error {
 			var candidates []FeedItem
 			var urls []string
 			for _, item := range feed.Items {
-				normalized, err := normalizeURL(item.URL)
+				normalized, err := NormalizeItemURL(item.URL)
 				if err != nil || seen[normalized] {
 					continue
 				}
@@ -106,7 +106,7 @@ func (c *Collector) RunOnce(ctx context.Context) error {
 					blocked = append(blocked, BlockedContent{SourceID: source.ID, URL: normalized, OriginalTitle: item.Title, FirstBlockedAt: now})
 					continue
 				}
-				item.ImageURL, _ = normalizeURL(item.ImageURL)
+				item.ImageURL, _ = NormalizeItemURL(item.ImageURL)
 				if source.Kind == SourceKindHFModels {
 					if item.Published == nil || item.Published.Before(now.Add(-30*24*time.Hour)) || item.Published.After(now) {
 						continue
@@ -168,7 +168,8 @@ func (c *Collector) RunOnce(ctx context.Context) error {
 	return failures
 }
 
-func normalizeURL(raw string) (string, error) {
+// NormalizeItemURL retains meaningful URL distinctions while removing tracking metadata.
+func NormalizeItemURL(raw string) (string, error) {
 	parsed, err := url.Parse(raw)
 	if err != nil {
 		return "", fmt.Errorf("invalid item URL")

@@ -1,15 +1,22 @@
-.rail-hot { margin: 10px 0 0; padding: 0; list-style: none; }
-.rail-hot li { display: flex; gap: 10px; padding: 9px 0; border-top: 1px solid var(--line); }
-.rail-hot li:first-child { border-top: 0; }
-.rail-hot a { font-size: 13.5px; font-weight: 500; line-height: 1.5; }
-.rail-hot a:hover { color: var(--accent); }
-.rail-hot p { margin: 3px 0 0; color: var(--ink-3); font-size: 13px; }
+.rail-hot { margin: 14px 0 0; padding: 0; list-style: none; }
+.rail-hot li { display: flex; align-items: baseline; gap: 10px; padding: 12px 0; }
+.rail-hot li:first-child { padding-top: 0; }
+.rail-hot li:last-child { padding-bottom: 0; }
+.rail-hot li > div { min-width: 0; }
+.rail-hot .rank { width: 18px; font-size: 14px; }
+.rail-hot a { display: block; font-size: 14px; font-weight: 500; line-height: 1.65; text-wrap: pretty; }
+.rail-hot a:hover { text-decoration: underline; }
+.rail-hot p { margin: 4px 0 0; color: var(--ink-3); font-size: 12px; }
 
-.rail-report-date { margin: 10px 0 4px; color: var(--ink-3); font: 12px var(--font-mono); }
-.rail-report-headline { font-size: 14px; font-weight: 500; line-height: 1.6; }
-.rail-report-headline:hover { color: var(--accent); }
+.rail-report-date { margin: 14px 0 6px; color: var(--ink-3); font: 12px var(--font-sans); }
+.rail-report-headline { display: block; font: 600 16px/1.65 var(--font-sans); }
+.rail-report-headline:hover { text-decoration: underline; }
+.rail-report-read { display: inline-flex; align-items: center; gap: 6px; margin-top: 12px; padding-block: 4px; color: var(--ink-2); font-size: 13px; }
+.rail-report-read:hover { color: var(--ink); text-decoration: underline; }
 
-.topic-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
-.topic-chips a { display: inline-flex; gap: 6px; padding: 4px 9px; border: 1px solid var(--line); border-radius: var(--radius-pill); background: var(--bg); color: var(--ink-2); font-size: 13px; }
-.topic-chips a:hover { border-color: var(--accent); color: var(--accent); }
-.topic-chips span { color: var(--ink-3); font: 12px var(--font-mono); }
+.topic-chips { display: grid; gap: 2px; margin-top: 12px; }
+.topic-chips a { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 36px; padding: 6px 0; color: var(--ink-2); font-size: 13px; }
+.topic-chips a:hover { color: var(--ink); text-decoration: underline; }
+.topic-chips span { color: var(--ink-3); font: 12px var(--font-sans); }
+.topic-chips img { flex: none; padding: 3px; border-radius: 5px; background: #fff; object-fit: contain; }
+.topic-chips .rail-topic-name { flex: 1; color: var(--ink-2); font: 13px/1.6 var(--font-sans); }

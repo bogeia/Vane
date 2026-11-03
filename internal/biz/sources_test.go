@@ -60,7 +60,9 @@ func (f redirectProbe) Fetch(_ context.Context, source CollectSource) (Feed, err
 	}
 	return Feed{URL: "https://example.com/b", Items: []FeedItem{{Published: &f.now}}}, nil
 }
+
 func (redirectProbe) Article(context.Context, CollectSource, string) (string, error) { return "", nil }
+
 func TestSourcesImportDeduplicatesSuccessfulFinalURLs(t *testing.T) {
 	for _, failDirect := range []bool{true, false} {
 		t.Run(fmt.Sprint(failDirect), func(t *testing.T) {

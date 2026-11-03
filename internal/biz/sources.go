@@ -73,7 +73,7 @@ func (u *SourcesUseCase) Enabled() []Source {
 }
 
 func NormalizeSourceURL(raw string) (string, error) {
-	normalized, err := normalizeURL(raw)
+	normalized, err := NormalizeItemURL(raw)
 	if err != nil {
 		return "", err
 	}

@@ -5,6 +5,7 @@ import (
 	"errors"
 	"io"
 	"log/slog"
+	"reflect"
 	"strings"
 	"sync/atomic"
 	"testing"
@@ -16,13 +17,15 @@ import (
 )
 
 type stageWriter struct {
-	calls       atomic.Int32
-	prefilter   func(context.Context) (string, error)
-	beforeSave  func()
-	beforeScore func()
-	beforeWrite func()
-	writing     func() (biz.Writing, error)
-	group       func(context.Context, biz.WorkItem, []biz.StoryCandidate) ([]biz.StoryRelation, error)
+	enhancementCalls atomic.Int32
+	enhance          func(context.Context, biz.WorkItem) (string, error)
+	calls            atomic.Int32
+	prefilter        func(context.Context) (string, error)
+	beforeSave       func()
+	beforeScore      func()
+	beforeWrite      func()
+	writing          func() (biz.Writing, error)
+	group            func(context.Context, biz.WorkItem, []biz.StoryCandidate) ([]biz.StoryRelation, error)
 }
 
 func (w *stageWriter) Prefilter(ctx context.Context, _ biz.WorkItem) (string, error) {
@@ -53,6 +56,14 @@ func (w *stageWriter) Write(context.Context, biz.WorkItem) (biz.Writing, error) 
 		w.beforeWrite()
 	}
 	return biz.Writing{Title: "OpenAI Atlas release", Summary: "OpenAI Atlas release details", Tags: []string{}, Subjects: []string{}}, nil
+}
+
+func (w *stageWriter) EnhanceSummary(ctx context.Context, item biz.WorkItem) (string, error) {
+	w.enhancementCalls.Add(1)
+	if w.enhance != nil {
+		return w.enhance(ctx, item)
+	}
+	return "", nil
 }
 
 func (w *stageWriter) Group(ctx context.Context, item biz.WorkItem, candidates []biz.StoryCandidate) ([]biz.StoryRelation, error) {
@@ -117,7 +128,7 @@ func TestProcessingStageIsAnalyzedBeforeGrouping(t *testing.T) {
 }
 
 func TestProcessingStageCASPreservesExternalTerminal(t *testing.T) {
-	for _, boundary := range []string{"prefilter", "score1", "score2", "writing", "group"} {
+	for _, boundary := range []string{"prefilter", "score1", "score2", "writing", "enhancement", "group"} {
 		t.Run(boundary, func(t *testing.T) {
 			store, now := groupStore(t)
 			seed := groupItem(t, store, now.Add(-time.Hour), 1)
@@ -133,6 +144,8 @@ func TestProcessingStageCASPreservesExternalTerminal(t *testing.T) {
 				query = `UPDATE items SET stage='prefiltered',prefilter='PASS',score1=NULL WHERE id=$1`
 			case "score2":
 				query = `UPDATE items SET stage='prefiltered',prefilter='PASS',score2=NULL WHERE id=$1`
+			case "enhancement":
+				query = `UPDATE items SET prefilter='PASS',category='论文' WHERE id=$1`
 			case "writing":
 				query = `UPDATE items SET stage='prefiltered',prefilter='PASS',title='',summary='' WHERE id=$1`
 			}
@@ -151,6 +164,12 @@ func TestProcessingStageCASPreservesExternalTerminal(t *testing.T) {
 			}
 			if boundary == "score1" || boundary == "score2" {
 				writer.beforeScore = change
+			}
+			if boundary == "enhancement" {
+				writer.enhance = func(context.Context, biz.WorkItem) (string, error) {
+					change()
+					return "Enhanced release research details", nil
+				}
 			}
 			if boundary == "writing" {
 				writer.beforeWrite = change
@@ -423,5 +442,132 @@ func TestWritingInvalidCategoryRetriesThenPublishes(t *testing.T) {
 				t.Fatalf("writing calls=%d", writes.Load())
 			}
 		})
+	}
+}
+
+func TestSummaryCheckpointSurvivesGroupingFailureAndReclaim(t *testing.T) {
+	for _, fallback := range []bool{false, true} {
+		name := "success"
+		if fallback {
+			name = "fallback"
+		}
+		t.Run(name, func(t *testing.T) {
+			store, now := groupStore(t)
+			seed := groupItem(t, store, now.Add(-time.Hour), 1)
+			repo := data.NewWorkRepo(store)
+			if err := repo.Group(t.Context(), seed, now, biz.PlanGrouping(seed, now, func(context.Context, []biz.StoryCandidate) (int64, error) { return 0, nil })); err != nil {
+				t.Fatal(err)
+			}
+			item := groupItem(t, store, now, 2)
+			const base = "OpenAI Atlas release details"
+			const enhanced = "OpenAI Atlas release details describe a research method, its experiments and limitations."
+			if _, err := testDB(t, store).ExecContext(t.Context(), `UPDATE items SET prefilter='PASS',category='论文' WHERE id=$1`, item.ID); err != nil {
+				t.Fatal(err)
+			}
+			groupFailure := errors.New("grouping fixture failure")
+			writer := &stageWriter{enhance: func(ctx context.Context, got biz.WorkItem) (string, error) {
+				// The row is readable and the global grouping lock is free during the model call.
+				if got.ID != item.ID || got.Writing.Summary != base {
+					t.Fatalf("enhancement input=%+v", got)
+				}
+				var unlocked bool
+				if err := testDB(t, store).QueryRowContext(ctx, `SELECT pg_try_advisory_xact_lock(606001::bigint)`).Scan(&unlocked); err != nil {
+					return "", err
+				}
+				if !unlocked {
+					t.Fatal("enhancement held global grouping lock")
+				}
+				if fallback {
+					return "", context.DeadlineExceeded
+				}
+				return enhanced, nil
+			}, group: func(_ context.Context, got biz.WorkItem, candidates []biz.StoryCandidate) ([]biz.StoryRelation, error) {
+				want := enhanced
+				if fallback {
+					want = base
+				}
+				if got.Writing.Summary != want || len(candidates) != 1 {
+					t.Fatalf("group input=%+v candidates=%+v", got, candidates)
+				}
+				return nil, groupFailure
+			}}
+			logger := slog.New(slog.NewTextHandler(io.Discard, nil))
+			if err := stageProcessor(store, writer, now, logger).RunOnce(t.Context()); !errors.Is(err, groupFailure) {
+				t.Fatalf("first error=%v", err)
+			}
+			var stage, storedBase, summary string
+			var done bool
+			var storyID *int64
+			if err := testDB(t, store).QueryRowContext(t.Context(), `SELECT stage,base_summary,summary,summary_enhancement_done,story_id FROM items WHERE id=$1`, item.ID).Scan(&stage, &storedBase, &summary, &done, &storyID); err != nil {
+				t.Fatal(err)
+			}
+			want := enhanced
+			if fallback {
+				want = base
+			}
+			if stage != biz.StageAnalyzed || storedBase != base || summary != want || !done || storyID != nil {
+				t.Fatalf("checkpoint: stage=%s base=%q summary=%q done=%v story=%v", stage, storedBase, summary, done, storyID)
+			}
+			writer.group = func(_ context.Context, got biz.WorkItem, candidates []biz.StoryCandidate) ([]biz.StoryRelation, error) {
+				if !got.SummaryEnhancementDone || got.BaseSummary != base || got.Writing.Summary != want {
+					t.Fatalf("reclaimed checkpoint=%+v", got)
+				}
+				return []biz.StoryRelation{{StoryID: candidates[0].StoryID, Relation: biz.RelationSameOccurrence, Confidence: 1}}, nil
+			}
+			if err := stageProcessor(store, writer, now.Add(time.Minute), logger).RunOnce(t.Context()); err != nil {
+				t.Fatal(err)
+			}
+			if writer.enhancementCalls.Load() != 1 {
+				t.Fatalf("enhancement calls=%d", writer.enhancementCalls.Load())
+			}
+			if err := testDB(t, store).QueryRowContext(t.Context(), `SELECT stage,story_id FROM items WHERE id=$1`, item.ID).Scan(&stage, &storyID); err != nil {
+				t.Fatal(err)
+			}
+			if stage != biz.StageDone || storyID == nil {
+				t.Fatalf("published stage=%s story=%v", stage, storyID)
+			}
+			public, err := data.NewItemsRepo(store).Detail(t.Context(), item.ID)
+			if err != nil || public.Summary != want {
+				t.Fatalf("public summary=%q error=%v", public.Summary, err)
+			}
+			// Public models carry only the chosen summary, never private quality-review checkpoints.
+			if _, exists := reflect.TypeFor[biz.Item]().FieldByName("BaseSummary"); exists {
+				t.Fatal("base summary exposed on public model")
+			}
+			if err := data.Migrate(t.Context(), store); err != nil {
+				t.Fatal(err)
+			}
+			if err := stageProcessor(store, writer, now.Add(time.Hour), logger).RunOnce(t.Context()); err != nil {
+				t.Fatal(err)
+			}
+			if writer.enhancementCalls.Load() != 1 {
+				t.Fatal("historical completed item enhanced")
+			}
+		})
+	}
+}
+
+func TestSummaryCancellationPreservesCheckpointAndReleasesClaim(t *testing.T) {
+	store, now := groupStore(t)
+	item := groupItem(t, store, now, 1)
+	if _, err := testDB(t, store).ExecContext(t.Context(), `UPDATE items SET prefilter='PASS',category='论文' WHERE id=$1`, item.ID); err != nil {
+		t.Fatal(err)
+	}
+	ctx, cancel := context.WithCancel(t.Context())
+	defer cancel()
+	writer := &stageWriter{enhance: func(context.Context, biz.WorkItem) (string, error) { cancel(); return "new summary", nil }}
+	if err := stageProcessor(store, writer, now, slog.New(slog.NewTextHandler(io.Discard, nil))).RunOnce(ctx); !errors.Is(err, context.Canceled) {
+		t.Fatalf("cancel error=%v", err)
+	}
+	claimed := false
+	processed, err := data.NewWorkRepo(store).ProcessNext(t.Context(), now, func(_ context.Context, got biz.WorkItem, _ func(biz.StepResult) error) (biz.ProcessResult, error) {
+		claimed = got.ID == item.ID
+		if got.Stage != biz.StageAnalyzed || got.SummaryEnhancementDone || got.BaseSummary != "" || got.Attempts != 0 || got.Writing.Summary != item.Writing.Summary {
+			t.Fatalf("cancelled state=%+v", got)
+		}
+		return biz.ProcessResult{PreviousStage: got.Stage, Stage: got.Stage, NextAttemptAt: now}, nil
+	})
+	if err != nil || !processed || !claimed {
+		t.Fatalf("reclaim processed=%v claimed=%v error=%v", processed, claimed, err)
 	}
 }

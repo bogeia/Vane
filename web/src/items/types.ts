@@ -3,6 +3,8 @@ export type Item = {
   id: string
   title: string
   original_title: string
+  has_body: boolean
+  has_discussion: boolean
   summary: string
   reason: string
   url: string

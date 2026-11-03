@@ -8,7 +8,7 @@ export const THEMES: { value: Theme; label: string }[] = [
   { value: 'dark', label: '深色' },
 ]
 const KEY = 'vane-theme'
-const COLORS = { light: '#f6f5f0', dark: '#0f1012' }
+const COLORS = { light: '#FAFAF7', dark: '#1A2023' }
 
 function readSaved(): Theme {
   try {

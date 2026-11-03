@@ -799,6 +799,7 @@ func testAgentServices(logger *slog.Logger, site config.Site, repository biz.Ite
 }
 
 func (fakeReportsRepository) MarkReportPushed(context.Context, string, time.Time) error { return nil }
+
 func (feedReportsRepository) MarkReportPushed(context.Context, string, time.Time) error { return nil }
 
 func (fakeItems) Topics(context.Context) ([]taxonomy.Topic, error) {
