@@ -11,14 +11,16 @@
 </p>
 <p align="center"><a href="README.md">简体中文</a> · English</p>
 
-![Vane's curated feed in the light theme](docs/images/selected-light.png)
+[![Vane's curated feed in the light theme](docs/images/selected-light.png)](docs/images/selected-light.png)
 
 <details>
 <summary>Dark theme</summary>
 
-![Vane's curated feed in the dark theme](docs/images/selected-dark.png)
+[![Vane's curated feed in the dark theme](docs/images/selected-dark.png)](docs/images/selected-dark.png)
 
 </details>
+
+The current curated page uses a column layout. Both themes are captured at 3× resolution; click an image to view the original.
 
 Vane collects material from RSS feeds, websites, and Hugging Face. It uses language models to screen for relevance, score items, and write Chinese summaries, then groups coverage of the same story. Browse curated picks, follow companies and technical topics, subscribe to daily reports, or connect your own tools through RSS, the API, or MCP. **The interface and generated content are primarily in Chinese; this is the English setup and usage guide.**
 
@@ -27,6 +29,7 @@ Vane collects material from RSS feeds, websites, and Hugging Face. It uses langu
 - **Multiple source types:** RSS / Atom, website listings, and Hugging Face model releases; OPML import previews, block words, and source health statistics.
 - **Chinese-language curation:** AI relevance screening, two independent scores, Chinese titles and summaries; coverage of the same story is collapsed in the curated feed.
 - **Topics and stories:** Browse by company, technical field, or content format, with story timelines and coverage from multiple sources.
+- **HN community discussions:** Optional background collection of recent HN posts and real top-level comments, linked to the same occurrence only after checking original titles, structured facts, full versions, and occurrence dates. Up to 10 sampled comments produce up to 3 cited Chinese points, shown on story pages and in the story API with sample size and update time. They represent sampled opinions, not community consensus, and do not affect curation, scores, or heat.
 - **Hot ranking and daily reports:** Rank stories by multi-source coverage; generate daily reports starting at 08:00 Beijing time; send reports and source alerts through WeCom or Feishu.
 - **Reading tools:** Search, favorites, unread filtering, light and dark themes, keyboard shortcuts, and mobile layouts. Favorites and reading history stay in the current browser; no account is required.
 - **Open interfaces:** JSON API, category RSS feeds, OPML, Markdown endpoints for AI assistants, and MCP.
@@ -95,6 +98,8 @@ Edit `configs/sources.yaml`, maintaining sources under `sources.official` (offic
 | `rss` | RSS / Atom URL | Subscribe directly to a source |
 | `web_list` | Website listing URL | Also configure item, link, title, and date selectors under `web_list`; confirm that the website permits crawling |
 | `hf_models` | `https://huggingface.co/<org>` | Collect model repositories created in the last 30 days; the example block rules exclude format variants such as FP8, BF16, and GGUF |
+
+Enable HN discussions with `community.enabled`; `community.refresh_interval` controls refreshes (the example defaults to disabled / `30m`). Each round scans the first 50 topstories and 50 newstories, discovering at most 100 distinct posts from the last 7 days. Posts and top-level comment samples are persisted before association, including unmatched posts. Exact URLs are clues, not sufficient evidence: the subject, action, full version, and occurrence date must agree; missing, conflicting, or ambiguous evidence prevents association. No summary does not mean no discussion. Replies are not collected. A successful empty result clears old points; temporary failures may retain still-valid results, which are hidden after 24 hours without confirmation. Reading pages or the story API triggers no collection or model calls. Discussions are not included in daily reports, RSS, or Agent output.
 
 The backend completes source icons independently at startup, including for existing sources, without blocking item collection. Validated originals and input fingerprints are cached in PostgreSQL. The frontend uses the API's `source.icon_url`; rebuilding it does not clear icons. Built-in publisher SVGs take precedence; otherwise Vane compares the actual quality of feed images, website icons, and favicons. It preserves aspect ratios and does not upscale low-resolution images into high-resolution ones. Remote SVGs must pass a static graphics allowlist: scripts, event attributes, CSS, external references, and DOCTYPE are rejected. Raster formats, byte sizes, and decoded dimensions are restricted.
 
