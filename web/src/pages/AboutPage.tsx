@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react'
-import { Link } from 'react-router'
 import { tierOfGroup } from '../lib/tier'
 import { Columns } from '../shell/Shell'
 import { TableOfContents } from '../ui/TableOfContents'
@@ -116,7 +115,7 @@ export function AboutPage() {
     <section aria-labelledby="about-thanks">
       <h2 id="about-thanks">致谢</h2>
       <p>Vane 借鉴了 <a href="https://github.com/KKKKhazix/AIHOT" target="_blank" rel="noopener noreferrer">AIHOT</a>（MIT 许可）的选题思路、预筛和评分提示词、分类说明以及主题和标签词表，借鉴的内容以仓库里的 NOTICE 为准。也参考了 ai-news-radar、Horizon、TrendRadar、Folo、Miniflux 的做法。</p>
-      <p className="about-note">更新记录见<Link to="/changelog">更新日志</Link>。</p>
+      <p className="about-note">更新记录见<a href="https://github.com/bogeia/Vane/releases" target="_blank" rel="noopener noreferrer">GitHub Releases 更新日志</a>。</p>
     </section>
   </article></Columns>
 }

@@ -4,7 +4,6 @@ import { BrowserRouter, Route, Routes } from 'react-router'
 import './styles/base.css'
 import { AgentPage } from './pages/AgentPage'
 import { AboutPage } from './pages/AboutPage'
-import { ChangelogPage } from './pages/ChangelogPage'
 import { FavoritesPage } from './pages/FavoritesPage'
 import { HotPage } from './pages/HotPage'
 import { ItemPage } from './pages/ItemPage'
@@ -34,7 +33,6 @@ function App() {
       <Route path="/more" element={<MorePage />} />
       <Route path="/agent" element={<AgentPage />} />
       <Route path="/about" element={<AboutPage />} />
-      <Route path="/changelog" element={<ChangelogPage />} />
       <Route path="*" element={<ErrorPage kind="notfound" what="页面" />} />
     </Route>
   </Routes>

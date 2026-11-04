@@ -8,13 +8,16 @@ import './home-rail.css'
 
 type HotStory = { story_id: string; title: string; heat: number; sources: { name: string }[] }
 
-// 内容右栏：热点榜前 6、最新一期日报、有精选的主题。热点榜页自己就是榜单，不再重复热点。
+// 内容右栏：热点榜前 6、最新一期日报、按精选数量排序的公司主题。热点榜页自己就是榜单，不再重复热点。
 export function HomeRail({ hot: showHot = true, excludeTopic, report: showReport = true }: { hot?: boolean; excludeTopic?: string; report?: boolean }) {
   const hot = useResource<{ items: HotStory[] }>(showHot ? '/api/hot' : null, { progress: false })
   const reports = useReports({ progress: false })
   const topics = useTopics({ progress: false })
   const latest = reports.status === 'ok' ? reports.data.items[0] : undefined
-  const topicChips = topics.status === 'ok' ? topics.data.topics.filter(topic => topic.selected_count > 0 && topic.slug !== excludeTopic).slice(0, 14) : []
+  const topicChips = topics.status === 'ok' ? topics.data.topics
+    .filter(topic => topic.group === 'company' && topic.selected_count > 0 && topic.slug !== excludeTopic)
+    .sort((a, b) => b.selected_count - a.selected_count)
+    .slice(0, 14) : []
   return <>
     {showHot && <section className="panel" aria-labelledby="rail-hot">
       <div className="panel-head"><h2 id="rail-hot"><IconFlame size={16} />热点榜</h2><Link to="/hot" aria-label="查看全部热点榜">全部</Link></div>

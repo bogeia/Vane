@@ -14,7 +14,7 @@ test('顶部导航和底部标签按 spec 的表高亮', () => {
     ['/topics/agent', 'topics', 'topics'],
     ['/favorites', 'favorites', 'more'],
     ['/about', 'about', 'more'],
-    ['/changelog', 'changelog', 'more'],
+    ['/changelog', null, null],
     ['/agent', 'agent', 'more'],
     ['/more', null, 'more'],
     ['/items/240', null, null],

@@ -7,7 +7,7 @@ const press = (key: string, extra: Partial<KeyInput> = {}) => shortcutAction({ k
 test('页面类型按 spec 划分', () => {
   for (const path of ['/', '/all', '/favorites', '/hot', '/topics/agent', '/reports/2026-10-23', '/stories/88']) assert.equal(shortcutPage(path), 'list', path)
   assert.equal(shortcutPage('/items/240'), 'detail')
-  for (const path of ['/topics', '/reports', '/more', '/about', '/changelog', '/nope', '/items/1/x']) assert.equal(shortcutPage(path), 'other', path)
+  for (const path of ['/topics', '/reports', '/more', '/about', '/nope', '/items/1/x']) assert.equal(shortcutPage(path), 'other', path)
 })
 
 test('每个按键在列表页、详情页、其他页面的动作', () => {

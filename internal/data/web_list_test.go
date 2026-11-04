@@ -84,7 +84,7 @@ func TestWebListOfficialSamplesUseExampleSelectors(t *testing.T) {
 		id, file, title, path, date string
 		count                       int
 	}{
-		{"web-anthropic-news", "anthropic-news.html", "Anthropic files S-1 with the SEC for proposed initial public offering", "/news/s1-sec", "2026-10-26T00:00:00+08:00", 3},
+		{"web-anthropic-news", "anthropic-news.html", "AI for Science expands to foundations and research institutions", "/news/ai-for-science-expands-foundations-research-institutions", "2026-10-28T00:00:00+08:00", 3},
 		{"web-kimi-blog", "kimi-blog.html", "Kimi K3.1 Pro", "/en/blog/kimi-k3-1-pro", "2026-10-24T00:00:00+08:00", 2},
 	} {
 		t.Run(tc.id, func(t *testing.T) {

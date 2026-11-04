@@ -53,7 +53,7 @@ export async function mockDesignData(page) {
 }
 
 export async function testRedesign(browser, baseURL, screenshotDir) {
-  const routes = ['/', '/all', '/all?q=AI', '/hot', '/topics', '/topics/openai', '/reports', '/reports/2026-10-30', '/items/1', '/stories/1', '/favorites', '/more', '/about', '/agent', '/changelog', '/missing']
+  const routes = ['/', '/all', '/all?q=AI', '/hot', '/topics', '/topics/openai', '/reports', '/reports/2026-10-30', '/items/1', '/stories/1', '/favorites', '/more', '/about', '/agent', '/missing']
   let checked = 0
   for (const width of [1536, 390, 320]) for (const theme of ['light', 'dark']) {
     const page = await browser.newPage({ viewport: { width, height: 1000 }, reducedMotion: 'reduce' })

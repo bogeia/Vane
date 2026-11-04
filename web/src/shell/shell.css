@@ -21,7 +21,6 @@
 .masthead-tools { display: flex; align-items: center; gap: 4px; }
 .theme-button, .help-button { display: grid; place-items: center; width: 32px; height: 38px; border: 0; background: transparent; color: var(--ink-2); }
 .theme-button:hover, .help-button:hover { color: var(--accent); }
-.new-dot { display: inline-block; flex: none; width: 6px; height: 6px; border-radius: 50%; background: var(--hot); }
 .phonebar, .phone-search, .tabbar { display: none; }
 .shell-main { min-width: 0; padding: 32px 32px 80px; outline: 0; }
 .shell-content { width: 100%; max-width: 1190px; margin-inline: auto; min-width: 0; overflow-wrap: anywhere; }
@@ -64,7 +63,6 @@
   .tabbar { position: fixed; inset-inline: 0; bottom: 0; z-index: 40; display: grid; grid-template-columns: repeat(5, 1fr); padding: 8px 0 calc(8px + env(safe-area-inset-bottom)); border-top: 1px solid var(--line); background: var(--bg); }
   .tabbar a { position: relative; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 4px 0; color: var(--ink-3); font-size: 12px; }
   .tabbar a[aria-current="page"] { color: var(--accent); font-weight: 650; }
-  .tabbar .new-dot { position: absolute; top: 1px; left: calc(50% + 10px); }
   .back-to-top { right: 16px; bottom: calc(var(--tabbar-height) + 16px + env(safe-area-inset-bottom)); }
   .is-detail .back-to-top { bottom: calc(76px + env(safe-area-inset-bottom)); }
 }

@@ -17,9 +17,12 @@ export async function testSidebarLayout(page, baseURL) {
     { date: '2026-10-27', headline: '前一期' },
   ]
   const topics = [
-    { slug: 'openai', name: 'OpenAI', group: 'company', description: '', selected_count: 2, all_count: 3 },
-    { slug: 'anthropic', name: 'Anthropic', group: 'company', description: '', selected_count: 1, all_count: 1 },
-    ...Array.from({ length: 12 }, (_, index) => ({ slug: `topic-${index}`, name: `较长的测试主题名称 ${index}`, group: 'field', description: '', selected_count: 1, all_count: 1 })),
+    { slug: 'openai', name: 'OpenAI', group: 'company', description: '', selected_count: 2, all_count: 100 },
+    { slug: 'anthropic', name: 'Anthropic', group: 'company', description: '', selected_count: 5, all_count: 5 },
+    { slug: 'models', name: '模型方向', group: 'field', description: '', selected_count: 100, all_count: 100 },
+    { slug: 'tutorials', name: '教程形态', group: 'genre', description: '', selected_count: 99, all_count: 99 },
+    { slug: 'empty-company', name: '暂无精选公司', group: 'company', description: '', selected_count: 0, all_count: 100 },
+    ...Array.from({ length: 14 }, (_, index) => ({ slug: `topic-${index}`, name: `较长的测试公司名称 ${index}`, group: 'company', description: '', selected_count: index + 1, all_count: 20 - index })),
   ]
   await page.route('**/api/**', route => {
     const path = new URL(route.request().url()).pathname
@@ -39,11 +42,22 @@ export async function testSidebarLayout(page, baseURL) {
       await page.setViewportSize({ width: 1440, height })
       await page.goto(new URL('/', baseURL).href)
       await page.locator('.columns-rail .topic-chips a').last().waitFor()
+      const chips = page.locator('.columns-rail .topic-chips a')
+      assert.deepEqual(await chips.evaluateAll(links => links.map(link => link.getAttribute('href'))), [
+        ...Array.from({ length: 9 }, (_, index) => `/topics/topic-${13 - index}`),
+        '/topics/anthropic', '/topics/topic-4', '/topics/topic-3', '/topics/topic-2', '/topics/openai',
+      ], 'rail shows at most 14 companies by selected count, preserving ties and omitting other groups and empty companies')
+      assert.deepEqual(await chips.locator('span:last-child').allTextContents(), ['14', '13', '12', '11', '10', '9', '8', '7', '6', '5', '5', '4', '3', '2'])
       const rail = page.locator('.columns-rail')
       const before = await rail.evaluate(element => ({ client: element.clientHeight, scroll: element.scrollHeight, top: getComputedStyle(element).top }))
-      assert.equal(before.top, '20px')
-      assert.ok(before.scroll > height - 40, `${height}px fixture must exceed the available rail height`)
-      assert.ok(before.client <= height - 40, `${height}px rail must fit the viewport`)
+      assert.equal(before.top, '28px')
+      assert.ok(before.scroll > height - 56, `${height}px fixture must exceed the available rail height`)
+      assert.ok(before.client <= height - 56, `${height}px rail must fit the viewport`)
+      await rail.evaluate(element => { window.scrollBy({ top: element.getBoundingClientRect().top - parseFloat(getComputedStyle(element).top), behavior: 'instant' }) })
+      await page.waitForFunction(() => {
+        const rail = document.querySelector('.columns-rail')!
+        return Math.abs(rail.getBoundingClientRect().top - parseFloat(getComputedStyle(rail).top)) <= 1
+      })
       await rail.evaluate(element => { element.scrollTop = element.scrollHeight })
       const end = await rail.evaluate(element => {
         const bounds = element.getBoundingClientRect()
@@ -74,9 +88,11 @@ export async function testSidebarLayout(page, baseURL) {
     }
     await page.goto(new URL('/topics/openai', baseURL).href)
     await page.locator('.columns-rail a[href="/topics/anthropic"]').waitFor()
-    const topicLinks = await page.locator('.columns-rail a').evaluateAll(links => links.map(link => link.getAttribute('href')))
-    assert.ok(topicLinks.includes('/topics/anthropic'))
-    assert.ok(!topicLinks.includes('/topics/openai'))
+    const topicLinks = await page.locator('.columns-rail .topic-chips a').evaluateAll(links => links.map(link => link.getAttribute('href')))
+    assert.deepEqual(topicLinks, [
+      ...Array.from({ length: 9 }, (_, index) => `/topics/topic-${13 - index}`),
+      '/topics/anthropic', '/topics/topic-4', '/topics/topic-3', '/topics/topic-2', '/topics/topic-1',
+    ], 'excluding the current company happens before the 14-company limit')
 
     await page.goto(new URL('/reports', baseURL).href)
     await page.locator('.columns-rail .topic-chips a').last().waitFor()
@@ -88,7 +104,7 @@ export async function testSidebarLayout(page, baseURL) {
       assert.ok(await page.locator(`[id="${href.slice(1)}"]`).count(), `daily target ${href}`)
     }
 
-    for (const [path, href] of [['/about', '#about-what'], ['/agent', '#agent-mcp'], ['/changelog', '#release-v0.1.0']]) {
+    for (const [path, href] of [['/about', '#about-what'], ['/agent', '#agent-mcp']]) {
       await page.goto(new URL(path, baseURL).href)
       assert.ok(await page.locator(`.toc a[href="${href}"]`).count(), `${path} TOC link`)
       assert.ok(await page.locator(`[id="${href.slice(1)}"]`).count(), `${path} TOC target`)
@@ -102,7 +118,7 @@ export async function testSidebarLayout(page, baseURL) {
     page.on('request', onRequest)
     for (const width of [1180, 390]) {
       await page.setViewportSize({ width, height: 900 })
-      for (const path of ['/topics/openai', '/favorites', '/reports', '/reports/2026-10-28', '/items/item-1', '/stories/story-1', '/about', '/agent', '/changelog']) {
+      for (const path of ['/topics/openai', '/favorites', '/reports', '/reports/2026-10-28', '/items/item-1', '/stories/story-1', '/about', '/agent']) {
         await page.goto(new URL(path, baseURL).href)
         assert.equal(await page.locator('.columns-rail').count(), 0, `${width}px ${path} has no rail`)
         assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), `${width}px ${path} has no horizontal overflow`)

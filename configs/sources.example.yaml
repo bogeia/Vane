@@ -87,6 +87,48 @@ sources:
       enabled: true
       interval_minutes: 120
       block: []
+    - id: rss-apple-ml
+      kind: rss
+      name: "Apple Machine Learning Research"
+      feed_url: https://ml.apple.com/rss.xml
+      enabled: true
+      interval_minutes: 180
+      block: []
+    - id: rss-ollama
+      kind: rss
+      name: "Ollama Blog"
+      feed_url: https://ollama.com/blog/rss.xml
+      enabled: true
+      interval_minutes: 180
+      block: []
+    - id: rss-together-ai
+      kind: rss
+      name: "Together AI Blog"
+      feed_url: https://www.together.ai/blog/rss.xml
+      enabled: true
+      interval_minutes: 180
+      block: []
+    - id: rss-stability-ai
+      kind: rss
+      name: "Stability AI News"
+      feed_url: https://stability.ai/news-updates?format=rss
+      enabled: true
+      interval_minutes: 360
+      block: []
+    - id: rss-vllm
+      kind: rss
+      name: "vLLM Blog"
+      feed_url: https://vllm.ai/blog/rss.xml
+      enabled: true
+      interval_minutes: 180
+      block: []
+    - id: rss-langchain
+      kind: rss
+      name: "LangChain Blog"
+      feed_url: https://www.langchain.com/blog/rss.xml
+      enabled: true
+      interval_minutes: 180
+      block: []
     - id: web-anthropic-news
       kind: web_list
       name: "Anthropic News"
@@ -96,7 +138,7 @@ sources:
       block: []
       web_list:
         item: '[data-listing-row]'
-        link: 'a[class*="__title-link"]'
+        link: 'a[class*="_title-link"]'
         title: h3
         date: time
     - id: web-kimi-blog

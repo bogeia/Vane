@@ -24,6 +24,8 @@ The current curated page uses a column layout. Both themes are captured at 3× r
 
 Vane collects material from RSS feeds, websites, and Hugging Face. It uses language models to screen for relevance, score items, and write Chinese summaries, then groups coverage of the same story. Browse curated picks, follow companies and technical topics, subscribe to daily reports, or connect your own tools through RSS, the API, or MCP. **The interface and generated content are primarily in Chinese; this is the English setup and usage guide.**
 
+See [GitHub Releases](https://github.com/bogeia/Vane/releases) for release notes.
+
 ## Features
 
 - **Multiple source types:** RSS / Atom, website listings, and Hugging Face model releases; OPML import previews, block words, and source health statistics.
@@ -38,15 +40,20 @@ The backend uses Go, Echo, Huma, GORM, and PostgreSQL. The frontend uses React, 
 
 ## Quick start
 
-### Prerequisites
+Choose a source build or [Docker deployment](#docker-deployment). A source build requires Go, Node.js, and your own PostgreSQL instance as listed below. Docker only requires Docker with Compose and `openssl`; Go and Node.js run in the image build stages. Clone the repository for either option, then follow the Docker section for its separate configuration files if using Docker.
+
+```sh
+git clone https://github.com/bogeia/vane.git
+cd vane
+```
+
+### Source build prerequisites
 
 - Go **1.25.11 or later**.
 - Node.js **24 or later**, with npm.
 - An accessible **PostgreSQL 16** instance and a database for Vane.
 
 ```sh
-git clone https://github.com/bogeia/vane.git
-cd vane
 cp configs/config.example.yaml configs/config.yaml
 cp configs/sources.example.yaml configs/sources.yaml
 ```
@@ -85,13 +92,13 @@ The server serves frontend assets from `web.dir`, which is `web/dist` in the exa
 
 ## Configuration
 
-See the [main configuration example](configs/config.example.yaml) and [source example](configs/sources.example.yaml) for fields and example values. The private `configs/config.yaml` and `configs/sources.yaml` files are excluded from Git and the Docker build context.
+See the [main configuration example](configs/config.example.yaml) and [source example](configs/sources.example.yaml) for fields and example values. Source builds use `configs/config.yaml` and `configs/sources.yaml`. Docker uses separate files at `configs/docker/config.yaml` and `configs/docker/sources.yaml`, mounted under `/data/conf/` inside the container. These private configurations are excluded from Git and the Docker build context.
 
 Every command selects the main configuration with `--conf`. Its `sources_file` points to the source file; relative paths resolve against the main configuration's directory. Runtime configuration does not read environment variables. Fields must be explicit, and unknown fields—including nested fields—are rejected in both configuration files. When upgrading, compare against the examples, add newly required fields, and remove obsolete ones.
 
 ### Sources
 
-Edit `configs/sources.yaml`, maintaining sources under `sources.official` (official, first-party sources) and `sources.media` (media and individuals). Both groups must be present; write `[]` for an empty group. Do not set `tier` on individual sources: the group determines it. IDs must be unique across both groups. The old flat list format is not accepted. Supported types:
+For source builds, edit `configs/sources.yaml`; for Docker, edit `configs/docker/sources.yaml`. Maintain sources under `sources.official` (official, first-party sources) and `sources.media` (media and individuals). Both groups must be present; write `[]` for an empty group. Do not set `tier` on individual sources: the group determines it. IDs must be unique across both groups. The old flat list format is not accepted. Supported types:
 
 | `kind` | `feed_url` | Description |
 | --- | --- | --- |
@@ -154,27 +161,56 @@ A source's `block` uses the same word-group syntax against original titles, skip
 
 ## Docker deployment
 
-The repository includes a [Dockerfile](Dockerfile) and [Docker Compose configuration](docker-compose.yaml). The image contains both frontend and backend. Compose **does not include PostgreSQL**; provide your own database.
+The repository includes a [Dockerfile](Dockerfile) and [Docker Compose configuration](docker-compose.yaml). The image contains both frontend and backend. Compose also runs PostgreSQL 16, accessible only on the container network without publishing port 5432. The site uses host port 8082 to avoid conflicting with an existing service on 8080.
 
-Prepare the two private configuration files as described in the quick start, then check:
-
-- `server.address` is `:8080`, allowing access from outside the container.
-- `database.url` is reachable from the container; `localhost` inside the container refers to the container itself.
-- `site.public_url` is your actual site URL and `web.dir` is `web/dist`.
-- Any egress proxy is also reachable from the container.
+From the repository root, prepare separate Docker configuration files and a database password. These commands only create missing files, preserving existing configuration and passwords without changing the source-build files `configs/config.yaml` and `configs/sources.yaml`:
 
 ```sh
+mkdir -p configs/docker secrets
+[ -e configs/docker/config.yaml ] || cp configs/config.example.yaml configs/docker/config.yaml
+[ -e configs/docker/sources.yaml ] || cp configs/sources.example.yaml configs/docker/sources.yaml
+(umask 077; set -C; [ -e secrets/postgres_password ] || openssl rand -hex 32 > secrets/postgres_password)
+```
+
+When upgrading an existing Compose deployment, first manually copy your previous private configurations into `configs/docker/`, keeping the originals and avoiding overwriting existing files there. Then update the database URL below. Data from a previous external database is not imported automatically; back it up and migrate it if needed.
+
+Edit `configs/docker/config.yaml`, keeping the remaining fields from the complete example:
+
+```yaml
+server:
+  address: :8080
+  # Keep the remaining server fields from the full example configuration.
+database:
+  max_open_conns: 5
+  max_idle_conns: 2
+  conn_max_lifetime: 30m
+  url: postgres://vane:<password>@postgres:5432/vane?sslmode=disable
+site:
+  name: Vane
+  public_url: http://localhost:8082
+```
+
+Replace `<password>` with the same password stored in `secrets/postgres_password`; do not leave the placeholder unchanged. The generated hexadecimal password can be used directly in the connection URL. For remote access, set `site.public_url` to the actual site URL. Keep `web.dir` as `web/dist` and `sources_file` as `sources.yaml`. Edit the separate source file `configs/docker/sources.yaml` as needed, and enable collection and model calls as described in the quick start. Any egress proxy must be reachable from the container.
+
+```sh
+# Download the PostgreSQL image
+docker compose pull postgres
+# Build Vane and start the database and site; Vane waits for the database health check
 docker compose up -d --build
 docker compose logs -f vane
 ```
 
-Compose mounts `configs/` read-only at `/data/conf` and `logs/` at `/app/logs`. For a public deployment, serve HTTPS through a reverse proxy and rate-limit the anonymous, read-only Agent API and MCP endpoints.
+Open [http://localhost:8082](http://localhost:8082). PostgreSQL uses a dedicated `vane` user and `vane` database, with `shared_buffers=32MB`, `max_connections=20`, a 512 MB container memory limit, and 64 MB shared memory.
+
+Compose mounts `configs/docker/` read-only at `/data/conf` and `logs/` at `/app/logs`. Database data persists in `postgres/`, and the password file is mounted read-only into the database container. These private Docker configuration, password, and data directories are excluded from Git and the Docker build context. `docker compose down` does not remove the persistent host data. Do not delete `postgres/`; back it up before upgrading.
+
+The password file sets the database password only when initializing an empty data directory. Editing the file does not change an existing database user's password. For existing data, change the user's password through PostgreSQL, then update both the password file and Vane's `database.url`. For public deployments, serve HTTPS through a reverse proxy and rate-limit the anonymous, read-only Agent API and MCP endpoints.
 
 The project is still in development. Configuration and data models can change, and compatibility with older data is not guaranteed. Back up your database and private configuration before upgrading, and read the [data model conventions](docs/adr/0002-gorm-model-migrations.md).
 
 ## Common commands
 
-Run these from the repository root. See `./bin/vane --help` and each subcommand's `--help` for all options.
+These commands use a source build and run from the repository root. For Docker, replace `./bin/vane` with `docker compose exec vane ./vane` and `--conf configs/config.yaml` with `--conf /data/conf/config.yaml`; any input or output file paths must also be accessible inside the container. See `./bin/vane --help` and each subcommand's `--help` for all options.
 
 ```sh
 # Inspect source health and the processing queue without migrations or source synchronization

@@ -69,7 +69,7 @@ func TestSitemapListsFixedPagesWithoutLastModified(t *testing.T) {
 	if err := xml.Unmarshal(body, &document); err != nil {
 		t.Fatal(err)
 	}
-	want := []string{"/", "/all", "/hot", "/reports", "/topics", "/about", "/agent", "/changelog"}
+	want := []string{"/", "/all", "/hot", "/reports", "/topics", "/about", "/agent"}
 	if len(document.URLs) < len(want) {
 		t.Fatalf("document=%s", body)
 	}
@@ -88,4 +88,5 @@ func TestSitemapListsFixedPagesWithoutLastModified(t *testing.T) {
 		locations[index] = entry.Location
 	}
 	assert.Contains(t, locations, "https://vane.test/agent")
+	assert.NotContains(t, locations, "https://vane.test/changelog")
 }

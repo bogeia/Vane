@@ -24,6 +24,8 @@
 
 Vane 从 RSS、网站和 Hugging Face 收集资料，通过大模型预筛、评分和生成中文摘要，将同一事件的报道聚合起来。你可以浏览精选、追踪公司与技术主题、订阅日报，也可以通过 RSS、API 或 MCP 把内容接入自己的工具。
 
+发布记录见 [GitHub Releases](https://github.com/bogeia/Vane/releases)。
+
 ## 功能
 
 - **多种信源**：RSS / Atom、网页列表和 Hugging Face 模型发布；支持 OPML 导入预览、屏蔽词和信源健康统计。
@@ -38,15 +40,20 @@ Vane 从 RSS、网站和 Hugging Face 收集资料，通过大模型预筛、评
 
 ## 快速开始
 
-### 环境准备
+可选择源码运行或 [Docker 部署](#docker-部署)。源码运行需要下列 Go、Node.js 和自备 PostgreSQL；Docker 路径只需 Docker（含 Compose）和 `openssl`，Go、Node.js 由镜像构建阶段提供。两种方式都先克隆仓库；Docker 用户随后跳到 Docker 部署准备独立配置。
+
+```sh
+git clone https://github.com/bogeia/vane.git
+cd vane
+```
+
+### 源码运行：环境准备
 
 - Go **1.25.11 或更新版本**。
 - Node.js **24 或更新版本**，以及 npm。
 - 可访问的 **PostgreSQL 16** 实例和一个供 Vane 使用的数据库。
 
 ```sh
-git clone https://github.com/bogeia/vane.git
-cd vane
 cp configs/config.example.yaml configs/config.yaml
 cp configs/sources.example.yaml configs/sources.yaml
 ```
@@ -85,13 +92,13 @@ make build
 
 ## 配置
 
-完整字段与示例值见 [主配置示例](configs/config.example.yaml)和[信源示例](configs/sources.example.yaml)。实际使用的 `configs/config.yaml`、`configs/sources.yaml` 已被 Git 和 Docker 构建上下文忽略。
+完整字段与示例值见 [主配置示例](configs/config.example.yaml)和[信源示例](configs/sources.example.yaml)。源码运行使用 `configs/config.yaml`、`configs/sources.yaml`；Docker 使用独立的 `configs/docker/config.yaml`、`configs/docker/sources.yaml`，挂载后位于容器内 `/data/conf/`。这些私有配置均被 Git 和 Docker 构建上下文忽略。
 
 所有命令通过 `--conf` 指定主配置。主配置的 `sources_file` 指向信源文件，相对路径以主配置所在目录解析。运行配置不读取环境变量；字段需要显式填写，主配置与信源配置均拒绝未知字段（包括嵌套字段）；升级时请对照示例补齐新增字段并移除废弃字段。
 
 ### 信源
 
-编辑 `configs/sources.yaml`，在 `sources.official`（官方一手）和 `sources.media`（媒体与个人）两组中维护信源。两组都必须写出，没有信源时写 `[]`；每个信源不再填写 `tier`，程序按所在分组赋值，ID 在两组之间也必须唯一。旧的平铺列表不再接受。支持以下类型：
+源码运行编辑 `configs/sources.yaml`，Docker 部署编辑 `configs/docker/sources.yaml`。在 `sources.official`（官方一手）和 `sources.media`（媒体与个人）两组中维护信源。两组都必须写出，没有信源时写 `[]`；每个信源不再填写 `tier`，程序按所在分组赋值，ID 在两组之间也必须唯一。旧的平铺列表不再接受。支持以下类型：
 
 | `kind` | `feed_url` | 说明 |
 | --- | --- | --- |
@@ -160,27 +167,56 @@ realtime:
 
 ## Docker 部署
 
-仓库提供 [Dockerfile](Dockerfile) 和 [Docker Compose 配置](docker-compose.yaml)，镜像包含前端与后端。Compose **不包含 PostgreSQL**，需自行提供数据库。
+仓库提供 [Dockerfile](Dockerfile) 和 [Docker Compose 配置](docker-compose.yaml)，镜像包含前端与后端。Compose 同时运行 PostgreSQL 16，数据库仅供容器网络访问，不向宿主机开放 5432 端口；站点使用宿主机 8082 端口，避免与已有的 8080 服务冲突。
 
-先按快速开始准备两份私有配置，再确认以下设置：
-
-- `server.address` 为 `:8080`，让容器外可以访问。
-- `database.url` 使用容器可达的地址；容器中的 `localhost` 指向容器自身。
-- `site.public_url` 为实际访问地址，`web.dir` 为 `web/dist`。
-- 如使用出口代理，其地址也必须能从容器访问。
+在仓库根目录准备独立的 Docker 配置和数据库密码。以下命令只创建缺失文件，保留已有配置和密码，不影响原生运行的 `configs/config.yaml`、`configs/sources.yaml`：
 
 ```sh
+mkdir -p configs/docker secrets
+[ -e configs/docker/config.yaml ] || cp configs/config.example.yaml configs/docker/config.yaml
+[ -e configs/docker/sources.yaml ] || cp configs/sources.example.yaml configs/docker/sources.yaml
+(umask 077; set -C; [ -e secrets/postgres_password ] || openssl rand -hex 32 > secrets/postgres_password)
+```
+
+已有 Compose 部署升级时，先将原来的私有配置手动复制到 `configs/docker/`（保留原件，并避免覆盖该目录已有文件），再按下文修改连接地址；原先外部数据库的数据不会自动导入新数据库，需要保留时先备份并迁移。
+
+编辑 `configs/docker/config.yaml`，保留完整示例中的其他字段，修改以下配置：
+
+```yaml
+server:
+  address: :8080
+  # 其余 server 字段保留完整示例中的配置。
+database:
+  max_open_conns: 5
+  max_idle_conns: 2
+  conn_max_lifetime: 30m
+  url: postgres://vane:<password>@postgres:5432/vane?sslmode=disable
+site:
+  name: Vane
+  public_url: http://localhost:8082
+```
+
+将 `<password>` 替换为 `secrets/postgres_password` 中的同一密码，不能直接保留占位符。上述命令生成的十六进制密码可直接用于连接 URL。远程访问时将 `site.public_url` 改为实际访问地址；`web.dir` 保持 `web/dist`，`sources_file` 保持 `sources.yaml`。按需编辑独立信源文件 `configs/docker/sources.yaml`；采集和模型调用的开启方式见快速开始。如使用出口代理，其地址必须能从容器访问。
+
+```sh
+# 下载 PostgreSQL 镜像
+docker compose pull postgres
+# 构建 Vane，并启动数据库和站点；数据库健康检查通过后才启动 Vane
 docker compose up -d --build
 docker compose logs -f vane
 ```
 
-Compose 将 `configs/` 只读挂载到 `/data/conf`，将 `logs/` 挂载到 `/app/logs`。公开部署时建议通过反向代理提供 HTTPS，并为匿名只读的 Agent API 和 MCP 配置限流。
+打开 [http://localhost:8082](http://localhost:8082)。PostgreSQL 使用独立的 `vane` 账号和 `vane` 数据库，设置 `shared_buffers=32MB`、`max_connections=20`，容器内存上限为 512 MB，共享内存为 64 MB。
+
+Compose 将 `configs/docker/` 只读挂载到 `/data/conf`，将 `logs/` 挂载到 `/app/logs`，数据库数据持久化在 `postgres/`，密码文件只读挂载到数据库容器。这些 Docker 私有配置、密码和数据目录均已被 Git 和 Docker 构建上下文忽略。`docker compose down` 不会删除宿主机的持久数据；不要删除 `postgres/`，升级前先备份。
+
+密码文件仅在空数据目录首次初始化时设置数据库密码；修改该文件不会更改已有数据库账号的密码。已有数据需要通过 PostgreSQL 修改账号密码，再同步更新密码文件和 Vane 的 `database.url`。公开部署时建议通过反向代理提供 HTTPS，并为匿名只读的 Agent API 和 MCP 配置限流。
 
 项目仍在开发阶段，配置和数据模型可能变化，目前不提供旧数据迁移兼容保证。升级前备份数据库与私有配置，并阅读[数据模型维护约定](docs/adr/0002-gorm-model-migrations.md)。
 
 ## 常用命令
 
-以下命令在仓库根目录执行。完整参数可用 `./bin/vane --help` 及子命令的 `--help` 查看。
+以下命令用于源码运行，在仓库根目录执行。Docker 部署可将 `./bin/vane` 换为 `docker compose exec vane ./vane`，并将 `--conf configs/config.yaml` 换为 `--conf /data/conf/config.yaml`；命令涉及的文件路径也须在容器内可访问。完整参数可用 `./bin/vane --help` 及子命令的 `--help` 查看。
 
 ```sh
 # 查看信源健康与处理队列，不执行迁移或信源同步
@@ -257,12 +293,6 @@ VANE_TEST_DATABASE_URL='postgres://localhost:15432/vane_test?sslmode=disable' go
 ```
 
 修改 Wire 装配后执行 `make generate`；所需工具可用 `make init` 安装。架构与变更检查见 [AGENTS.md](AGENTS.md)，领域术语见 [GLOSSARY.md](GLOSSARY.md)，设计决策见 [docs/adr](docs/adr)。
-
-## 发布
-
-[releases.json](releases.json) 是站内更新日志与 GitHub Release 的唯一内容来源；每次发布先增加对应 tag 的记录，并同步 `web/package.json` 与锁文件版本。可用 `node scripts/release-notes.ts v0.2.0` 预览说明。
-
-先将发布提交推送到 `main` 并确认该提交的 Go 工作流通过，再创建并推送对应 tag（例如 `git tag v0.2.0 && git push origin v0.2.0`）。Release 工作流按 tag 读取同一条记录创建 GitHub Release；没有匹配记录时失败，不生成开发提交列表。
 
 ## 致谢与许可
 

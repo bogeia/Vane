@@ -46,6 +46,7 @@ bin/
 .idea/
 *.swp
 .scratch
+.playwright-mcp/
 .codegraph
 .impeccable
 
@@ -59,3 +60,8 @@ web/dist/
 
 # Private design notes
 /docs/design.md
+
+# Local Docker deployment configuration, credentials and database
+/configs/docker/
+/secrets/
+/postgres/

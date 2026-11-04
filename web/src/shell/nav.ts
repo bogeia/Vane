@@ -1,5 +1,5 @@
 // 外壳的导航规则：顶部和手机底部标签在哪些地址高亮，哪些地址按详情页处理。
-export type NavKey = 'selected' | 'all' | 'hot' | 'reports' | 'topics' | 'favorites' | 'about' | 'agent' | 'changelog'
+export type NavKey = 'selected' | 'all' | 'hot' | 'reports' | 'topics' | 'favorites' | 'about' | 'agent'
 export type TabKey = 'selected' | 'hot' | 'topics' | 'reports' | 'more'
 
 // 资料详情由页面按资料是否入选决定高亮，这里返回 null。
@@ -12,7 +12,6 @@ export function navKeyFor(pathname: string): NavKey | null {
   if (pathname === '/favorites') return 'favorites'
   if (pathname === '/about') return 'about'
   if (pathname === '/agent') return 'agent'
-  if (pathname === '/changelog') return 'changelog'
   return null
 }
 
@@ -23,7 +22,7 @@ export function tabKeyFor(pathname: string, nav: NavKey | null): TabKey | null {
     case 'hot': return 'hot'
     case 'reports': return 'reports'
     case 'topics': return 'topics'
-    case 'favorites': case 'about': case 'agent': case 'changelog': return 'more'
+    case 'favorites': case 'about': case 'agent': return 'more'
     default: return null
   }
 }

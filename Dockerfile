@@ -3,7 +3,6 @@ WORKDIR /src/web
 COPY web/package*.json ./
 RUN npm ci
 COPY web/ ./
-COPY releases.json /src/releases.json
 RUN npm run build
 
 FROM golang:1.25 AS builder

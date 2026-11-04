@@ -75,7 +75,7 @@ func TestSitemapIncludesPublicPagesAndUsesProcessingWindowAndLastModified(t *tes
 		}
 		locations[entry.Location] = entry.LastModified
 	}
-	for _, path := range []string{"/", "/all", "/hot", "/reports", "/topics", "/about", "/agent", "/changelog"} {
+	for _, path := range []string{"/", "/all", "/hot", "/reports", "/topics", "/about", "/agent"} {
 		if lastmod, ok := locations[base+path]; !ok || lastmod != "" {
 			t.Fatalf("missing fixed page %s or unexpected lastmod", path)
 		}
@@ -88,7 +88,7 @@ func TestSitemapIncludesPublicPagesAndUsesProcessingWindowAndLastModified(t *tes
 	if _, exists := locations[base+"/more"]; exists {
 		t.Fatal("sitemap lists the phone-only /more page")
 	}
-	if len(locations) != 8+len(taxonomy.Topics)+70+1 {
+	if len(locations) != 7+len(taxonomy.Topics)+70+1 {
 		t.Fatalf("sitemap URLs=%d", len(locations))
 	}
 	processed, err := time.Parse(time.RFC3339, locations[base+"/items/"+strconv.FormatInt(included, 10)])
@@ -146,7 +146,7 @@ func TestSitemapCapsURLsAndKeepsLatestProcessedItemsEvenWhenReportsFillLimit(t *
 		return doc
 	}
 	doc := get()
-	itemBudget := 50000 - 8 - len(taxonomy.Topics)
+	itemBudget := 50000 - 7 - len(taxonomy.Topics)
 	seen := map[string]bool{}
 	for _, entry := range doc.URLs {
 		seen[entry.Location] = true

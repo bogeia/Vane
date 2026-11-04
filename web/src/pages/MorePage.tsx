@@ -1,17 +1,14 @@
 import type { ReactNode } from 'react'
 import { Link } from 'react-router'
-import { latestRelease, useChangelogUnseen } from '../changelogState'
-import { NewDot } from '../shell/Shell'
 import { setTheme, THEMES, useTheme } from '../shell/theme'
 import { useReadingState } from '../useReadingState'
-import { IconBookmark, IconChevron, IconGrid, IconHistory, IconInfo, IconRss, type Icon } from '../ui/icons'
+import { IconBookmark, IconChevron, IconExternal, IconGrid, IconHistory, IconInfo, IconRss, type Icon } from '../ui/icons'
 import './more.css'
 
 // 更多 /more：收藏、外观和站点接入。
 export function MorePage() {
   const favorites = useReadingState().favorites().length
   const theme = useTheme()
-  const unseen = useChangelogUnseen()
   return <div className="more">
     <h1>更多</h1>
     <section aria-labelledby="more-reading">
@@ -35,7 +32,7 @@ export function MorePage() {
       <div className="more-group">
         <MoreRow to="/about" icon={IconInfo} label="关于 Vane" note="它做什么、怎么挑资料、有哪些信源" />
         <MoreRow to="/agent" icon={IconRss} label="接入 Agent" note="让 AI 助手直接读精选、热点和日报" />
-        <MoreRow to="/changelog" icon={IconHistory} label="更新日志" note={`${latestRelease.title} · ${latestRelease.date}`} dot={unseen} />
+        <MoreRow href="https://github.com/bogeia/Vane/releases" icon={IconHistory} label="更新日志" note="在 GitHub Releases 查看发布说明" />
       </div>
     </section>
     <section aria-labelledby="more-feeds">
@@ -49,12 +46,12 @@ export function MorePage() {
   </div>
 }
 
-function MoreRow({ to, href, icon: RowIcon, label, note, dot = false }: { to?: string; href?: string; icon: Icon; label: string; note: string; dot?: boolean }) {
+function MoreRow({ to, href, icon: RowIcon, label, note }: { to?: string; href?: string; icon: Icon; label: string; note: string }) {
+  const external = href?.startsWith('https://')
   const content: ReactNode = <>
     <span className="more-icon"><RowIcon size={19} /></span>
     <span className="more-text"><b>{label}</b><small>{note}</small></span>
-    {dot && <NewDot />}
-    <IconChevron size={16} />
+    {external ? <IconExternal size={16} /> : <IconChevron size={16} />}
   </>
-  return to ? <Link className="more-row" to={to}>{content}</Link> : <a className="more-row" href={href}>{content}</a>
+  return to ? <Link className="more-row" to={to}>{content}</Link> : <a className="more-row" href={href} target={external ? '_blank' : undefined} rel={external ? 'noopener noreferrer' : undefined}>{content}</a>
 }

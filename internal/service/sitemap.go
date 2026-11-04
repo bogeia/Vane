@@ -15,7 +15,7 @@ import (
 const sitemapLimit = 50000
 
 // Fixed pages carry no lastmod. /more is phone-only navigation and stays out.
-var sitemapFixedPaths = []string{"/", "/all", "/hot", "/reports", "/topics", "/about", "/agent", "/changelog"}
+var sitemapFixedPaths = []string{"/", "/all", "/hot", "/reports", "/topics", "/about", "/agent"}
 
 type sitemapURL struct {
 	Location     string `xml:"loc"`

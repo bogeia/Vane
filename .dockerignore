@@ -11,3 +11,8 @@ web/dist
 .scratch
 configs/config.yaml
 configs/sources.yaml
+
+# Local Docker deployment configuration, credentials and database
+/configs/docker/
+/secrets/
+/postgres/

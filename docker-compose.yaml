@@ -1,9 +1,32 @@
 services:
+  postgres:
+    image: postgres:16.15-bookworm
+    environment:
+      POSTGRES_USER: vane
+      POSTGRES_DB: vane
+      POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password
+    command: ["postgres", "-c", "shared_buffers=32MB", "-c", "max_connections=20"]
+    mem_limit: 512m
+    shm_size: 64mb
+    volumes:
+      - ./postgres:/var/lib/postgresql/data
+      - ./secrets/postgres_password:/run/secrets/postgres_password:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U vane -d vane"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    restart: unless-stopped
+
   vane:
     build: .
+    depends_on:
+      postgres:
+        condition: service_healthy
     ports:
-      - "8080:8080"
+      - "8082:8080"
     volumes:
-      - ./configs:/data/conf:ro
+      - ./configs/docker:/data/conf:ro
       - ./logs:/app/logs
     restart: unless-stopped

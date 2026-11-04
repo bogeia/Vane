@@ -1,6 +1,5 @@
 import { createContext, useContext, useEffect, useLayoutEffect, useRef, useState, type MouseEvent, type ReactNode } from 'react'
 import { Link, Outlet, useLocation, useNavigate, useNavigationType } from 'react-router'
-import { useChangelogUnseen } from '../changelogState'
 import { useMediaQuery } from '../lib/media'
 import { useProgressActive } from '../lib/resource'
 import { refreshReading, useReports } from '../lib/reading'
@@ -49,7 +48,6 @@ export function Shell() {
   const navigationType = useNavigationType()
   const navigate = useNavigate()
   const theme = useTheme()
-  const changelogUnseen = useChangelogUnseen()
   const [override, setOverride] = useState<NavKey | null>(null)
   const nav = override ?? navKeyFor(pathname)
   const tab = tabKeyFor(pathname, nav)
@@ -142,7 +140,7 @@ export function Shell() {
         <Link className="brand" to="/"><img className="brand-mark" src="/icon.svg" alt="" width="34" height="34" /><span>Vane</span></Link>
         <nav className="masthead-nav" aria-label="主导航">
           {PRIMARY_NAV.map(item => <Link key={item.key} to={item.to} aria-current={item.key === nav ? 'page' : undefined}>{item.label}</Link>)}
-          <Link to="/more" aria-current={tab === 'more' ? 'page' : undefined}>更多{changelogUnseen && <NewDot />}</Link>
+          <Link to="/more" aria-current={tab === 'more' ? 'page' : undefined}>更多</Link>
         </nav>
         <SearchForm className="masthead-search" />
         <div className="masthead-tools">
@@ -167,7 +165,7 @@ export function Shell() {
 
       {!detail && <nav className="tabbar" aria-label="底部导航">
         {tabs.map(item => <Link key={item.key} to={item.to} aria-current={item.key === tab ? 'page' : undefined}>
-          <item.icon size={22} /><span>{item.label}</span>{item.key === 'more' && changelogUnseen && <NewDot />}
+          <item.icon size={22} /><span>{item.label}</span>
         </Link>)}
       </nav>}
 
@@ -207,11 +205,6 @@ function SearchForm({ id, className, autoFocus = false, onClose }: { id?: string
       onChange={event => setDraft(event.target.value)} />
     {!onClose && <kbd aria-hidden="true">/</kbd>}
   </form>
-}
-
-// 更新日志有新内容时的红点。
-export function NewDot() {
-  return <i className="new-dot"><span className="visually-hidden">（有新的更新）</span></i>
 }
 
 function skipToMain(event: MouseEvent) {

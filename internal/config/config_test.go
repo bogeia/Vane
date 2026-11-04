@@ -415,7 +415,7 @@ func TestSourcesFile(t *testing.T) {
 				t.Fatalf("expected explicit inline sources rejection, got %v", err)
 			}
 			if test.valid {
-				want := 28
+				want := 34
 				if test.name == "empty sources list" {
 					want = 0
 				}

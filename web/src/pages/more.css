@@ -13,7 +13,6 @@
 .more-text { display: grid; flex: 1; gap: 2px; min-width: 0; }
 .more-text b { color: var(--ink); font-size: 15px; font-weight: 600; }
 .more-text small { font-size: 13px; line-height: 1.6; }
-.more-row .new-dot { margin-left: 0; }
 
 .theme-options { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; padding: 4px; }
 .theme-options label { display: grid; place-items: center; height: 40px; border-radius: var(--radius-button); color: var(--ink-2); font-size: 14px; cursor: pointer; }
@@ -21,7 +20,7 @@
 .theme-options label:has(input:checked) { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
 .theme-options label:has(input:focus-visible) { outline: 2px solid var(--accent); outline-offset: -2px; }
 
-/* ---------- 关于、更新日志 ---------- */
+/* ---------- 关于 ---------- */
 .prose-page section { margin-top: 28px; scroll-margin-top: calc(var(--phonebar-height) + 18px); }
 .prose-page h2 { margin: 0 0 10px; font: 650 20px/1.5 var(--font-sans); }
 .prose-page p, .prose-page li { color: var(--ink-2); font-size: 16px; line-height: 1.8; }
@@ -43,12 +42,6 @@
 .source-group li { display: flex; justify-content: space-between; gap: 8px; padding: 6px 0; border-top: 1px solid var(--line); font-size: 14px; }
 .prose-page .source-group a { flex: none; font-size: 13px; text-decoration: none; }
 .about-feeds { margin: 0; padding-left: 1.2em; }
-
-.release { padding: 24px 0; border-top: 1px solid var(--line-strong); }
-.prose-page .release-date { margin: 0 0 4px; color: var(--ink-3); font: 13px var(--font-sans); }
-.release h2 { margin: 0 0 6px; }
-.release ul { margin: 0; padding-left: 1.2em; }
-.release li { margin: 3px 0; }
 
 @media (max-width: 960px) {
   .more { grid-template-columns: minmax(0, 1fr); gap: 20px; }
